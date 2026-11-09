@@ -682,6 +682,9 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").cat
 
 /* ---------- старт ---------- */
 if (LS.get("selo:seen") !== "1") hello(true);
+// вітальне вікно не зникає саме: якщо телефон перезавантажив сторінку чи її згорнули — показуємо знову, поки людина не натисне кнопку
+document.addEventListener("visibilitychange", function(){ if (!document.hidden && LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
+addEventListener("pageshow", function(){ if (LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
 tick(); load();
 </script>
 </body>
