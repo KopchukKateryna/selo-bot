@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2F4F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1621" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Сяйво">
+<meta name="description" content="Світло в Наливайківці: графік відключень ДТЕК (черга 6.2), погода, схід і захід сонця.">
+<title>Сяйво Наливайківки</title>
+<link rel="manifest" href="/manifest.webmanifest/*KQ*/">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --bg:#F2F4F7; --surface:#FFFFFF; --ink:#101A26; --muted:#4F5E70; --line:#D9E0E8; --accent:#2457C9;
+  --on:#17805F; --off:#C2341F; --maybe:#9A6B00; --sky1:#1B2A4A; --fs:1;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0E1621; --surface:#172538; --ink:#F1F5FA; --muted:#AEBCCD; --line:#2A3C56; --accent:#7EA6FF;
+    --on:#3DCB9C; --off:#FF7A66; --maybe:#F0C24B; }
+}
+html[data-big="1"]{ --fs:1.18 }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:calc(20px*var(--fs));line-height:1.35;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:14px 14px 40px}
+.top{text-align:center;margin:6px 0 14px}
+.top h1{margin:0;font-size:calc(26px*var(--fs));font-weight:800;letter-spacing:-.01em}
+.top p{margin:4px 0 0;color:var(--muted);font-size:calc(17px*var(--fs))}
+.top b{color:var(--ink)}
+
+.welcome{display:flex;flex-direction:column;gap:12px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));
+  border:2px solid color-mix(in srgb,var(--accent) 40%,transparent);border-radius:20px;padding:16px 16px;margin-bottom:14px}
+.welcome b{font-size:calc(21px*var(--fs))}
+.welcome .row{display:flex;gap:10px}
+.btn{border:0;border-radius:16px;min-height:58px;padding:0 18px;font-weight:700;font-size:calc(19px*var(--fs))}
+.btn.pri{background:var(--accent);color:#fff;flex:1}
+.btn.sec{background:var(--surface);border:2px solid var(--line)}
+
+.now{border-radius:22px;padding:18px 18px 20px;margin-bottom:14px;background:var(--surface);border:3px solid var(--c)}
+.now .st{display:flex;align-items:center;gap:14px}
+.now .ic{width:64px;height:64px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c)}
+.now .ic svg{width:38px;height:38px}
+.now .t1{font-size:calc(17px*var(--fs));color:var(--muted);font-weight:600}
+.now .t2{font-size:calc(34px*var(--fs));font-weight:800;line-height:1.05;color:var(--c)}
+.now .next{margin-top:14px;padding-top:14px;border-top:2px solid var(--line);font-size:calc(22px*var(--fs))}
+.now .next b{font-size:calc(30px*var(--fs));font-weight:800;font-variant-numeric:tabular-nums}
+.now .next small{display:block;color:var(--muted);font-size:calc(18px*var(--fs));margin-top:2px}
+
+.card{background:var(--surface);border-radius:22px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 12px;font-size:calc(22px*var(--fs));font-weight:800}
+.seg{display:flex;gap:6px;background:var(--bg);padding:5px;border-radius:16px;margin-bottom:10px}
+.seg button{flex:1;border:0;background:none;border-radius:12px;min-height:52px;font-weight:700;font-size:calc(19px*var(--fs));color:var(--muted)}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.dial{display:block;width:calc(100% + 16px);margin-left:-8px !important;max-width:460px;margin:0 auto}
+.legend{display:flex;justify-content:center;gap:18px;margin:8px 0 2px;font-size:calc(18px*var(--fs));font-weight:600}
+.legend i{display:inline-block;width:18px;height:18px;border-radius:5px;vertical-align:-3px;margin-right:7px}
+.sun{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:12px}
+.sun span{background:var(--bg);border-radius:14px;padding:10px 6px;text-align:center;color:var(--muted);font-size:calc(15px*var(--fs));font-weight:600;line-height:1.2}
+.sun .dl{grid-column:1/-1;font-size:calc(18px*var(--fs))}
+.sun .dl b{display:inline;font-size:calc(20px*var(--fs))}
+.sun b{display:block;color:var(--ink);font-size:calc(21px*var(--fs));font-weight:800;margin-bottom:3px;font-variant-numeric:tabular-nums}
+.list{margin:12px 0 0;padding:0;list-style:none}
+.list li{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:2px solid var(--line);font-size:calc(22px*var(--fs))}
+.list li:first-child{border-top:0}
+.list li.past{opacity:.45}
+.list .m{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;
+  background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c);font-size:calc(20px*var(--fs))}
+.list .tm{font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.list .lb{white-space:nowrap}
+.list .now-b{display:inline-block;background:var(--c);color:#fff;border-radius:8px;padding:1px 8px;margin-right:6px;font-size:calc(16px*var(--fs))}
+.list .lb{margin-left:auto;color:var(--c);font-weight:700;font-size:calc(19px*var(--fs))}
+.list li.cur{background:color-mix(in srgb,var(--c) 10%,var(--surface));border-radius:14px;border-top-color:transparent}
+.list li.cur + li{border-top-color:transparent}
+
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--bg);border-radius:16px;padding:12px 14px}
+.stat span{display:block;color:var(--muted);font-size:calc(16px*var(--fs));font-weight:600}
+.stat b{font-size:calc(28px*var(--fs));font-weight:800;font-variant-numeric:tabular-nums}
+.week{margin-top:12px}
+.wk{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:calc(18px*var(--fs))}
+.wk span{width:44px;font-weight:700}
+.wk .bar{flex:1;height:22px;border-radius:7px;background:color-mix(in srgb,var(--on) 30%,var(--bg));overflow:hidden}
+.wk .bar i{display:block;height:100%;background:var(--off)}
+.wk b{width:84px;text-align:right;font-variant-numeric:tabular-nums}
+
+.tools{display:grid;gap:10px}
+.tool{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:2px solid var(--line);background:var(--surface);
+  border-radius:18px;min-height:68px;padding:10px 16px;font-weight:700;font-size:calc(20px*var(--fs))}
+.tool .ti{width:44px;height:44px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-size:24px;
+  background:color-mix(in srgb,var(--accent) 15%,var(--surface));color:var(--accent);font-weight:800}
+.tool small{display:block;font-weight:500;color:var(--muted);font-size:calc(16px*var(--fs))}
+.tool em{font-style:normal}
+.sm2{display:none}
+.tool .sm{display:none}
+.foot{text-align:center;color:var(--muted);font-size:calc(15px*var(--fs));margin-top:16px}
+
+
+/* погода */
+.wx-now{display:flex;align-items:center;gap:14px}
+.wx-ic{width:76px;height:76px;flex:none}
+.wx-t{font-size:calc(58px*var(--fs));font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.wx-d{font-size:calc(20px*var(--fs));font-weight:700}
+.wx-f{color:var(--muted);font-size:calc(17px*var(--fs))}
+.wx-rain{display:flex;gap:10px;align-items:center;margin:14px 0 4px;padding:12px 14px;border-radius:16px;
+  background:color-mix(in srgb,#2F7BE0 14%,var(--surface));color:var(--ink);font-size:calc(19px*var(--fs));font-weight:600}
+.wx-rain svg{width:30px;height:30px;flex:none}
+.wx-h{display:grid;grid-template-columns:repeat(6,1fr);gap:4px;margin-top:12px;text-align:center}
+.wx-h div{background:var(--bg);border-radius:14px;padding:8px 2px}
+.wx-h b{display:block;font-size:calc(16px*var(--fs));color:var(--muted);font-weight:700}
+.wx-h svg{width:34px;height:34px;display:block;margin:4px auto}
+.wx-h strong{display:block;font-size:calc(20px*var(--fs));font-weight:800}
+.wx-h i{display:block;font-style:normal;color:#2F7BE0;font-weight:700;font-size:calc(15px*var(--fs));min-height:1.2em}
+.wx-days{margin-top:12px}
+.wx-day{display:flex;align-items:center;gap:10px;padding:10px 2px;border-top:2px solid var(--line);font-size:calc(20px*var(--fs))}
+.wx-day svg{width:38px;height:38px;flex:none}
+.wx-day .dn{flex:1;font-weight:700;line-height:1.2}
+.wx-day .dn small{display:block;color:#2F7BE0;font-weight:700;font-size:calc(16px*var(--fs))}
+.wx-day .mm{white-space:nowrap;font-size:calc(22px*var(--fs));font-weight:800;font-variant-numeric:tabular-nums}
+.wx-day .mm span{color:var(--muted);font-weight:700}
+.wx-day .pr{margin-left:auto;color:#2F7BE0;font-weight:700;font-size:calc(17px*var(--fs));text-align:right;line-height:1.2}
+@media (prefers-color-scheme: dark){ .wx-h i,.wx-day .dn small{color:#6FB0FF} }
+
+/* ===== комп'ютер: усе на одному екрані ===== */
+@media (min-width:1100px){
+  :root{--fs:.9}
+  body{overflow:hidden}
+  .wrap{max-width:none;height:100vh;height:100dvh;padding:12px 18px;display:grid;gap:12px;
+    grid-template-columns:minmax(290px,23fr) minmax(0,52fr) minmax(300px,25fr);
+    grid-template-rows:auto auto minmax(0,1fr);
+    grid-template-areas:"top tools tools" "now sched weather" "stats sched weather"}
+  .top{grid-area:top;text-align:left;margin:0;align-self:center}
+  /* перший візит на комп'ютері — вікно посередині екрана */
+  .welcome{position:fixed;z-index:15;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;margin:0;padding:26px 26px 22px;
+    border-radius:24px;background:var(--surface);box-shadow:0 0 0 100vmax rgba(4,8,15,.55),0 20px 50px rgba(0,0,0,.4);text-align:center}
+  #welcome b{font-size:calc(26px*var(--fs));line-height:1.3}
+  #welcome .btn{min-height:56px;font-size:calc(20px*var(--fs))}
+  .welcome .lg2{display:inline !important}
+  .welcome .sm2{display:none !important}
+  .tools{grid-area:tools;display:flex;gap:8px;justify-content:flex-end;align-self:center}
+  .tool{width:auto;min-height:52px;padding:6px 14px 6px 8px;border-radius:14px;gap:10px}
+  .tool small,.tool .sm{display:none}
+  .tool .lg{display:inline;white-space:nowrap}
+  .welcome .btn.sec{min-width:44px;padding:0 12px}
+  .tool .ti{width:38px;height:38px;font-size:20px}
+  .now{grid-area:now;margin:0}
+  #stats{grid-area:stats;margin:0;min-height:0;overflow:hidden}
+  #weather{grid-area:weather;margin:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  #sched{grid-area:sched;margin:0;min-height:0;display:grid;gap:0 18px;
+    grid-template-columns:minmax(0,1fr) minmax(230px,250px);grid-template-rows:auto minmax(0,1fr);
+    grid-template-areas:"h seg" "day list"}
+  #sched h2{grid-area:h;align-self:center;margin:0}
+  #seg{grid-area:seg;margin:0 0 10px}
+  #daybox{grid-area:day;min-height:0;display:flex;flex-direction:column;justify-content:center}
+  .dial{width:100% !important;max-width:none;margin:0 auto !important;max-height:calc(100vh - 290px);max-height:calc(100dvh - 290px)}
+  #list{grid-area:list;margin:0;overflow:auto;align-self:start}
+  .list li{padding:9px 4px}
+  .foot{display:none}
+  .now .t2{font-size:calc(32px*var(--fs))}
+  .now .ic{width:48px;height:48px}
+  .now .ic svg{width:28px;height:28px}
+  .now .next{font-size:calc(20px*var(--fs))}
+  .now .next b{font-size:calc(28px*var(--fs))}
+  .list li{font-size:calc(19px*var(--fs));gap:8px}
+  .list .m{width:30px;height:30px}
+  .list .lb{font-size:calc(16px*var(--fs))}
+  .stat b{font-size:calc(26px*var(--fs))}
+  .wk{margin:5px 0}
+  .wk .bar{height:18px}
+  .wx-h{grid-template-columns:repeat(3,1fr)}
+  .wx-h svg{width:28px;height:28px;margin:2px auto}
+  .wx-rain{margin:10px 0 2px;padding:9px 12px}
+  .wx-day{padding:7px 2px}
+  .wx-t{font-size:calc(52px*var(--fs))}
+  .wx-ic{width:62px;height:62px}
+}
+@media (min-width:1100px) and (min-height:900px){ :root{--fs:1.02} .wrap{padding:18px 24px;gap:16px} }
+@media (min-width:1100px) and (max-height:760px){
+  :root{--fs:.84}
+  .card{padding:12px 14px}
+  .now{padding:12px 14px 14px}
+  .now .ic{width:52px;height:52px}
+  .now .next{margin-top:10px;padding-top:10px}
+  .wx-days .wx-day:nth-child(n+3){display:none}
+  .wx-h div:nth-child(n+4){display:none}
+  .wk{margin:3px 0}
+  .wk .bar{height:14px}
+  .stat{padding:8px 12px}
+  .welcome b{font-size:calc(17px*var(--fs))}
+  .seg button{min-height:44px}
+  .sun span{padding:7px 6px}
+  .dial{max-height:calc(100vh - 250px);max-height:calc(100dvh - 250px)}
+}
+/* тур */
+.tourbg{position:fixed;inset:0;z-index:20;pointer-events:none}
+.arr{position:absolute;left:50%;width:0;height:0;margin-left:-12px;border:12px solid transparent}
+.arr.up{top:-24px;border-bottom-color:var(--surface)}
+.arr.down{bottom:-24px;border-top-color:var(--surface)}
+.dim{position:fixed;inset:0;z-index:20;pointer-events:none}
+.hole{position:absolute;border-radius:24px;box-shadow:0 0 0 4px #FFD54A,0 0 0 9999px rgba(5,10,18,.72)}
+.tip{position:fixed;left:14px;right:14px;z-index:21;background:var(--surface);color:var(--ink);border-radius:22px;padding:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.tip .stp{color:var(--accent);font-weight:800;font-size:calc(16px*var(--fs))}
+.tip h3{margin:4px 0 6px;font-size:calc(24px*var(--fs))}
+.tip p{margin:0 0 14px;font-size:calc(20px*var(--fs))}
+.tip .row{display:flex;gap:10px}
+.dots{display:flex;gap:6px;margin-bottom:10px}
+.dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--accent);width:26px;border-radius:5px}
+
+/* додати на екран */
+.sheet{position:fixed;inset:0;z-index:30;background:rgba(5,10,18,.6);display:flex;align-items:flex-end}
+.sh{width:100%;max-height:96vh;overflow:auto;background:var(--surface);border-radius:26px 26px 0 0;padding:16px 18px 26px}
+.sh h3{margin:2px 0 4px;font-size:calc(26px*var(--fs))}
+.sh p{margin:0 0 14px;color:var(--muted);font-size:calc(19px*var(--fs))}
+.pick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.pick button{border:3px solid var(--line);background:var(--bg);border-radius:20px;padding:16px 8px;font-weight:800;font-size:calc(22px*var(--fs));
+  display:flex;flex-direction:column;align-items:center;gap:8px}
+.pick button.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.pick svg{width:44px;height:44px}
+.steps{margin:0;padding:0;list-style:none;display:grid;gap:12px}
+.steps li{display:flex;gap:14px;align-items:flex-start;background:var(--bg);border-radius:18px;padding:14px}
+.steps .n{width:42px;height:42px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;background:var(--accent);color:#fff;font-weight:800;font-size:22px}
+.steps b{display:block;font-size:calc(21px*var(--fs))}
+.steps span{color:var(--muted);font-size:calc(18px*var(--fs))}
+.kbd{display:inline-flex;align-items:center;justify-content:center;min-width:40px;height:40px;padding:0 8px;border-radius:12px;border:2px solid var(--line);
+  background:var(--surface);color:var(--accent);font-weight:800;vertical-align:middle;margin:2px 4px}
+.kbd svg{width:24px;height:24px}
+.note{margin-top:14px;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--maybe) 16%,var(--surface));font-size:calc(18px*var(--fs))}
+
+.alert{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:16px;font-weight:600;font-size:calc(18px*var(--fs));
+  background:color-mix(in srgb,var(--maybe) 18%,var(--surface));border:2px solid color-mix(in srgb,var(--maybe) 45%,transparent)}
+.alert[hidden]{display:none}
+.msg{text-align:center;color:var(--muted);padding:18px 6px;font-size:calc(18px*var(--fs))}
+.legend .mb[hidden]{display:none}
+.welcome[hidden]{display:none !important}
+@media (min-width:1100px){ .alert{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:14px;max-width:820px;margin:0;box-shadow:0 8px 24px rgba(0,0,0,.25)} }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <header class="top">
+    <h1>Сяйво Наливайківки</h1>
+    <p>Черга <b id="grp">6.2</b> · <span id="upd">завантаження…</span></p>
+  </header>
+
+  <p class="alert" id="alert" hidden></p>
+
+  <section class="welcome" id="welcome" hidden>
+    <b>👋 Вперше тут? Покажу, як усе працює — це 1 хвилина.</b>
+    <div class="row"><button class="btn pri" id="wgo">Показати</button><button class="btn sec" id="wno"><span class="lg2">Не треба</span><span class="sm2">✕</span></button></div>
+  </section>
+
+  <section class="now" id="now" style="--c:var(--muted)">
+    <div class="st">
+      <div class="ic" id="nowic"></div>
+      <div><div class="t1">Зараз</div><div class="t2" id="nowt">…</div></div>
+    </div>
+    <div class="next" id="nownext">&nbsp;</div>
+  </section>
+
+  <section class="card" id="sched">
+    <h2>Графік на добу</h2>
+    <div class="seg" id="seg"><button class="on" data-d="0">Сьогодні</button><button data-d="1">Завтра</button></div>
+    <div id="daybox"><svg class="dial" id="dial" viewBox="0 0 440 440" role="img" aria-label="Графік відключень на добу"></svg>
+    <div class="legend"><span><i style="background:var(--on)"></i>світло є</span><span><i style="background:var(--off)"></i>немає</span><span class="mb" id="lgmb" hidden><i style="background:var(--maybe)"></i>можливо</span></div>
+    <div class="sun" id="sun"></div></div>
+    <ul class="list" id="list"></ul>
+  </section>
+
+  <section class="card" id="weather">
+    <div id="wxtop"><h2>Погода в Наливайківці</h2>
+    <div class="wx-now"><span id="wxi"></span><div><div class="wx-t" id="wxt">…</div></div>
+      <div><div class="wx-d" id="wxd1"></div><div class="wx-f" id="wxf"></div></div></div>
+    <div class="wx-rain" id="wxr"></div>
+    <div class="wx-h" id="wxh"></div></div>
+    <div class="wx-days" id="wxd"></div>
+  </section>
+
+  <section class="card" id="stats">
+    <div id="statnums"><h2 style="margin:0 0 12px">Скільки без світла</h2><div class="stats">
+      <div class="stat"><span>Сьогодні</span><b id="st0">—</b></div>
+      <div class="stat"><span>Завтра</span><b id="st1">—</b></div>
+    </div></div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="tools" id="tools">
+    <button class="tool" id="addbtn"><span class="ti">📲</span><span><em class="lg">Додати на екран телефона</em><em class="sm">На екран</em><small>Щоб відкривати одним дотиком</small></span></button>
+    <button class="tool" id="tourbtn"><span class="ti">?</span><span><em class="lg">Як користуватися</em><em class="sm">Підказки</em><small>Покажу ще раз, крок за кроком</small></span></button>
+    <button class="tool" id="bigbtn"><span class="ti">А+</span><span><em class="lg">Більший шрифт</em><em class="sm">Шрифт</em><small id="bigtxt">Зробити текст більшим</small></span></button>
+  </section>
+  <p class="foot" id="foot">Графік — із сайту ДТЕК, оновлюється кожні 10 хв. Погода — модель Open-Meteo.<br>Під час екстрених відключень графік може не діяти.</p>
+</div>
+
+<div id="overlay"></div>
+
+<script>
+"use strict";
+var LAT = 50.476, LON = 29.70;
+var ST = null, WX = null, DAY = 0, NOWM = 0, TODAY = "", TOMORROW = "";
+var LS = {get: function(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
+          set: function(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }};
+var KQ = new URLSearchParams(location.search).get("k");
+function q(p){ return p + (KQ ? (p.indexOf("?") < 0 ? "?" : "&") + "k=" + encodeURIComponent(KQ) : ""); }
+function $(id){ return document.getElementById(id); }
+
+/* ---------- час у Києві ---------- */
+function kyiv(d){
+  var f = new Intl.DateTimeFormat("en-CA", {timeZone: "Europe/Kyiv", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"});
+  var o = {}; f.formatToParts(d || new Date()).forEach(function(p){ o[p.type] = p.value; });
+  return {date: o.year + "-" + o.month + "-" + o.day, min: (+o.hour) * 60 + (+o.minute), y: +o.year, m: +o.month, d: +o.day};
+}
+function addDay(key, n){ var p = key.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.toISOString().slice(0, 10); }
+function tzOffsetMin(key){ // зсув Києва від UTC на цю дату (хв)
+  var p = key.split("-"), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2], 12));
+  var s = new Intl.DateTimeFormat("en-US", {timeZone: "Europe/Kyiv", hour: "2-digit", hourCycle: "h23"}).format(d);
+  return (+s - 12) * 60;
+}
+function hm(m){ m = Math.round(m); if (m >= 1440) return "24:00"; return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0"); }
+function dur(m){ m = Math.round(m); var h = Math.floor(m / 60), r = m % 60; return (h ? h + " год" : "") + (h && r ? " " : "") + (r ? r + " хв" : (h ? "" : "0 хв")); }
+function hrs(d){ return (d % 1 ? d.toFixed(1).replace(".", ",") : d) + " год"; }
+
+/* ---------- сонце (NOAA) ---------- */
+function sunTimes(key){
+  var p = key.split("-"), date = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+  var n = Math.round((date - Date.UTC(+p[0], 0, 0)) / 864e5), rad = Math.PI / 180, g = 2 * Math.PI / 365 * (n - 1);
+  var eq = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g) - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  var dc = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g) - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g) - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  var ha = Math.acos(Math.cos(90.833 * rad) / (Math.cos(LAT * rad) * Math.cos(dc)) - Math.tan(LAT * rad) * Math.tan(dc)) / rad;
+  var tz = tzOffsetMin(key);
+  return [720 - 4 * (LON + ha) - eq + tz, 720 - 4 * (LON - ha) - eq + tz];
+}
+
+/* ---------- графік ---------- */
+function intervals(key){ return ST && ST.days && ST.days[key] ? ST.days[key] : null; }
+function segs(iv){
+  var s = [], t = 0;
+  (iv || []).slice().sort(function(a, b){ return a[0] - b[0]; }).forEach(function(o){
+    if (o[0] > t) s.push([t, o[0], "on"]);
+    s.push([Math.max(o[0], t), o[1], o[2] === "maybe" ? "maybe" : "off"]); t = Math.max(t, o[1]);
+  });
+  if (t < 1440) s.push([t, 1440, "on"]);
+  // злити сусідні однакові
+  var r = []; s.forEach(function(x){ if (x[1] <= x[0]) return; var l = r[r.length - 1]; if (l && l[2] === x[2] && l[1] === x[0]) l[1] = x[1]; else r.push(x.slice()); });
+  return r;
+}
+function offMin(iv){ return (iv || []).reduce(function(a, o){ return a + (o[2] === "maybe" ? 0 : o[1] - o[0]); }, 0); }
+function pt(cx, cy, r, m){ var a = (m / 1440) * 2 * Math.PI - Math.PI / 2; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; }
+function arc(cx, cy, r, a, b){ var p = pt(cx, cy, r, a), qq = pt(cx, cy, r, b), l = (b - a) > 720 ? 1 : 0;
+  return "M" + p[0].toFixed(1) + " " + p[1].toFixed(1) + " A" + r + " " + r + " 0 " + l + " 1 " + qq[0].toFixed(1) + " " + qq[1].toFixed(1); }
+function skyNight(){ return matchMedia("(prefers-color-scheme: dark)").matches ? "#0b1220" : "#1d2a4a"; }
+
+function drawDial(){
+  var key = DAY ? TOMORROW : TODAY, iv = intervals(key), S = segs(iv), SUN = sunTimes(key), isToday = !DAY;
+  var cx = 220, cy = 220, R = 124, W = 32, SR = R - W / 2 - 25, SW = 14, h = "";
+  if (!iv){
+    h += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" stroke="var(--line)" stroke-width="' + W + '" fill="none"/>';
+  } else S.forEach(function(s){
+    h += '<path d="' + arc(cx, cy, R, s[0] + 2, s[1] - 2) + '" stroke="var(--' + s[2] + ')" stroke-width="' + W + '" fill="none"/>';
+    if (s[2] === "on" && s[1] - s[0] >= 90){
+      var mid = (s[0] + s[1]) / 2, low = mid > 360 && mid < 1080, id = "lp" + DAY + "_" + s[0], p1 = pt(cx, cy, R, s[0]), p2 = pt(cx, cy, R, s[1]), lg = (s[1] - s[0]) > 720 ? 1 : 0;
+      var d = low ? "M" + p2[0] + " " + p2[1] + " A" + R + " " + R + " 0 " + lg + " 0 " + p1[0] + " " + p1[1] : "M" + p1[0] + " " + p1[1] + " A" + R + " " + R + " 0 " + lg + " 1 " + p2[0] + " " + p2[1];
+      h += '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="' + (s[1] - s[0] >= 150 ? 17 : 14) + '" font-weight="800" fill="#fff" dominant-baseline="central"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + hrs(Math.round((s[1] - s[0]) / 6) / 10) + '</textPath></text>';
+    }
+  });
+  // небо
+  h += '<circle cx="' + cx + '" cy="' + cy + '" r="' + SR + '" stroke="' + skyNight() + '" stroke-width="' + SW + '" fill="none"/>' +
+       '<path d="' + arc(cx, cy, SR, SUN[0], SUN[1]) + '" stroke="#F6C431" stroke-width="' + SW + '" fill="none"/>';
+  var r2 = SR - 17, a = SUN[0] + 25, b = SUN[1] - 25, p1 = pt(cx, cy, r2, b), p2 = pt(cx, cy, r2, a), n1 = pt(cx, cy, r2, SUN[1] + 40), n2 = pt(cx, cy, r2, SUN[0] + 1440 - 40);
+  h += '<path id="skyday" d="M' + p1[0] + ' ' + p1[1] + ' A' + r2 + ' ' + r2 + ' 0 0 0 ' + p2[0] + ' ' + p2[1] + '" fill="none"/>' +
+       '<path id="skynight" d="M' + n1[0] + ' ' + n1[1] + ' A' + r2 + ' ' + r2 + ' 0 1 1 ' + n2[0] + ' ' + n2[1] + '" fill="none"/>' +
+       '<text font-size="13" font-weight="700" fill="var(--ink)" dominant-baseline="central"><textPath href="#skyday" startOffset="50%" text-anchor="middle">сонце світить</textPath></text>' +
+       '<text font-size="13" font-weight="700" fill="var(--muted)" dominant-baseline="central"><textPath href="#skynight" startOffset="50%" text-anchor="middle">ніч</textPath></text>';
+  [[SUN[0], "☀"], [SUN[1], "☾"]].forEach(function(z){ var c = pt(cx, cy, SR, z[0]);
+    h += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="12" fill="var(--surface)" stroke="' + (z[1] === "☀" ? "#F2A65A" : "#EA7A55") + '" stroke-width="2.5"/>' +
+         '<text x="' + c[0] + '" y="' + (c[1] + 6) + '" text-anchor="middle" font-size="16" fill="' + (z[1] === "☀" ? "#E8902E" : "var(--ink)") + '">' + z[1] + '</text>'; });
+  // поділки й години
+  for (var k = 0; k < 48; k++){
+    var mn = k * 30, hr = k % 2 === 0, big = hr && (k / 2) % 6 === 0, o = R + W / 2 + 3, a1 = pt(cx, cy, o, mn), b1 = pt(cx, cy, o + (big ? 13 : hr ? 9 : 5), mn);
+    h += '<line x1="' + a1[0] + '" y1="' + a1[1] + '" x2="' + b1[0] + '" y2="' + b1[1] + '" stroke="var(--muted)" stroke-width="' + (big ? 3 : hr ? 2 : 1.2) + '" stroke-linecap="round"/>';
+    if (hr){ var H = k / 2, t = pt(cx, cy, R + W / 2 + (big ? 20 : 15), mn), ang = (mn / 1440) * 2 * Math.PI, sx = Math.sin(ang), cy2 = -Math.cos(ang),
+      anc = sx > 0.2 ? "start" : sx < -0.2 ? "end" : "middle", dy = (big ? 7 : 4.5) + (anc === "middle" ? (cy2 < 0 ? -6 : 10) : 0);
+      h += '<text x="' + t[0] + '" y="' + (t[1] + dy) + '" text-anchor="' + anc + '" font-size="' + (big ? 19 : 12.5) + '" font-weight="' + (big ? 800 : 600) + '" fill="' + (big ? "var(--ink)" : "var(--muted)") + '">' + String(H).padStart(2, "0") + ':00</text>'; }
+  }
+  if (isToday){
+    var dimArc = function(a, b, op){ h += '<path d="' + arc(cx, cy, R, a, b) + '" stroke="var(--surface)" stroke-opacity="' + op + '" stroke-width="' + (W + 1) + '" fill="none"/>' +
+      '<path d="' + arc(cx, cy, SR, a, b) + '" stroke="var(--surface)" stroke-opacity="' + op + '" stroke-width="' + (SW + 1) + '" fill="none"/>'; };
+    var ramp = Math.min(60, NOWM); if (NOWM - ramp > 0) dimArc(0, NOWM - ramp, 0.62);
+    for (var q2 = 0; q2 < 6; q2++) if (ramp > 0) dimArc(NOWM - ramp + q2 * ramp / 6, NOWM - ramp + (q2 + 1) * ramp / 6, (0.62 * (6 - q2) / 6.5).toFixed(2));
+    var e = pt(cx, cy, R + W / 2 - 2, NOWM);
+    h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + e[0] + '" y2="' + e[1] + '" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/><circle cx="' + cx + '" cy="' + cy + '" r="9" fill="var(--ink)"/>' +
+         '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="28" font-weight="800" fill="var(--ink)">' + hm(NOWM) + '</text>' +
+         '<text x="' + cx + '" y="' + (cy - 28) + '" text-anchor="middle" font-size="16" font-weight="700" fill="var(--muted)">зараз</text>';
+  } else {
+    h += '<text x="' + cx + '" y="' + (cy + 9) + '" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)">завтра</text>';
+  }
+  if (!iv) h += '<text x="' + cx + '" y="' + (cy + (isToday ? 64 : 40)) + '" text-anchor="middle" font-size="14" font-weight="700" fill="var(--muted)">графіка ще немає</text>';
+  $("dial").innerHTML = h;
+  $("sun").innerHTML = '<span><b>☀ ' + hm(SUN[0]) + '</b>схід сонця</span><span><b>☾ ' + hm(SUN[1]) + '</b>захід сонця</span>';
+  $("lgmb").hidden = !(iv || []).some(function(o){ return o[2] === "maybe"; });
+  // список
+  if (!iv){
+    $("list").innerHTML = '<li class="msg" style="display:block;border:0">' + (DAY ? "ДТЕК ще не оприлюднив графік на завтра. Зазвичай він з’являється ввечері." : "Графіка на сьогодні поки немає.") + '</li>';
+  } else if (!iv.length){
+    $("list").innerHTML = '<li class="msg" style="display:block;border:0">☀ За графіком відключень ' + (DAY ? "завтра" : "сьогодні") + ' немає.</li>';
+  } else {
+    $("list").innerHTML = S.map(function(s){
+      var cur = isToday && NOWM >= s[0] && NOWM < s[1], on = s[2] === "on", past = isToday && s[1] <= NOWM;
+      return '<li class="' + (cur ? "cur" : past ? "past" : "") + '" style="--c:var(--' + s[2] + ')"><span class="m">' + (on ? "☀" : s[2] === "maybe" ? "?" : "✕") + '</span><span class="tm">' + hm(s[0]) + ' – ' + hm(s[1]) + '</span><span class="lb">' +
+        (cur ? '<span class="now-b">зараз</span>' : (on ? "світло" : s[2] === "maybe" ? "можливо" : "немає")) + '</span></li>';
+    }).join("");
+  }
+}
+
+var IC_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>';
+var IC_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 2v5M15 2v5M7 7h10v4a5 5 0 0 1-10 0z"/><path d="M12 16v6"/><path d="M3 3l18 18"/></svg>';
+
+function nextChange(){
+  // шукаємо найближчу зміну стану сьогодні або завтра
+  var t = segs(intervals(TODAY)), cur = null, i;
+  for (i = 0; i < t.length; i++) if (NOWM >= t[i][0] && NOWM < t[i][1]){ cur = t[i]; break; }
+  if (!cur) return null;
+  var state = cur[2], end = cur[1], day = 0;
+  if (end >= 1440){ var tm = intervals(TOMORROW);
+    if (tm){ var s2 = segs(tm); if (s2[0][2] === state){ end = s2[0][1]; day = 1; if (end >= 1440) return {state: state, end: null}; } else { end = 0; day = 1; } }
+    else return {state: state, end: null, unknown: true};
+  }
+  return {state: state, end: end, day: day};
+}
+function drawNow(){
+  var iv = intervals(TODAY);
+  if (!ST){ return; }
+  if (!iv){ $("now").style.setProperty("--c", "var(--muted)"); $("nowic").innerHTML = IC_ON; $("nowt").textContent = "Графіка немає";
+    $("nownext").innerHTML = '<small>ДТЕК поки не оприлюднив графік на сьогодні</small>'; return; }
+  var n = nextChange(); if (!n) return;
+  var off = n.state !== "on", txt = off ? (n.state === "maybe" ? "Можливе відключення" : "Світла немає") : "Світло є";
+  $("now").style.setProperty("--c", off ? (n.state === "maybe" ? "var(--maybe)" : "var(--off)") : "var(--on)");
+  $("nowic").innerHTML = off ? IC_OFF : IC_ON; $("nowt").textContent = txt;
+  var h;
+  if (n.end === null){ h = off ? "До кінця доби — без світла" + (n.unknown ? '<small>графік на завтра ще не оприлюднено</small>' : "") :
+      (n.unknown ? 'Сьогодні відключень більше немає<small>графік на завтра ще не оприлюднено</small>' : "Відключень за графіком не заплановано"); }
+  else { var left = (n.day ? 1440 : 0) + n.end - NOWM;
+    h = (off ? "Світло дадуть " : "Вимкнуть ") + (n.day ? "завтра " : "") + "о <b>" + hm(n.end) + "</b><small>через " + dur(left) + " · за графіком ДТЕК</small>"; }
+  $("nownext").innerHTML = h;
+}
+var DOW = ["Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+function drawStats(){
+  var t = intervals(TODAY), m = intervals(TOMORROW);
+  $("st0").textContent = t ? dur(offMin(t)) : "—"; $("st1").textContent = m ? dur(offMin(m)) : "ще невідомо";
+  var hist = (ST && ST.hist) || {}, rows = [];
+  for (var i = 7; i >= 1; i--){ var k = addDay(TODAY, -i); if (hist[k] != null) rows.push([k, hist[k]]); }
+  if (!rows.length){ $("week").innerHTML = '<div style="color:var(--muted);font-size:calc(16px*var(--fs))">Статистика за тиждень з’явиться через кілька днів роботи Сяйва.</div>'; return; }
+  $("week").innerHTML = '<div style="color:var(--muted);font-weight:600;font-size:calc(16px*var(--fs))">Останні 7 днів — годин без світла за графіком</div>' + rows.map(function(r){
+    var p = r[0].split("-"), dw = DOW[new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay()], hh = Math.round(r[1] / 6) / 10;
+    return '<div class="wk"><span>' + dw + '</span><div class="bar"><i style="width:' + Math.min(100, r[1] / 1440 * 100) + '%"></i></div><b>' + String(hh).replace(".", ",") + ' год</b></div>'; }).join("");
+}
+function drawTop(){
+  if (!ST) return;
+  $("grp").textContent = ST.group || "6.2";
+  var at = ST.checked_at ? new Date(ST.checked_at) : null, ago = at ? Math.round((Date.now() - at) / 60000) : null;
+  $("upd").textContent = ago == null ? "дані ще не надходили" : ago < 1 ? "оновлено щойно" : "оновлено " + (ago < 60 ? ago + " хв" : Math.floor(ago / 60) + " год") + " тому";
+  var al = [];
+  if (ST.notice && ST.notice.active) al.push("⚠️ ДТЕК повідомляє про " + (ST.notice.noSchedule ? "екстрені відключення — графіки зараз не діють." : "екстрені або аварійні відключення. Графік може не діяти."));
+  if (ST.outage && ST.outage.kind === "emergency") al.push("⚠️ ДТЕК: аварійне відключення в частині села" + (ST.outage.end ? ", орієнтовно до " + new Date(ST.outage.end).toLocaleTimeString("uk-UA", {timeZone: "Europe/Kyiv", hour: "2-digit", minute: "2-digit"}) : "") + ".");
+  if (ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
+  $("alert").innerHTML = al.join("<br>"); $("alert").hidden = !al.length;
+}
+function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawTop(); drawNow(); drawDial(); drawStats(); }
+
+/* ---------- погода ---------- */
+var IC = {
+ sun: '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="9" fill="#F6C431"/><g stroke="#F6C431" stroke-width="3.5" stroke-linecap="round"><path d="M24 5v5M24 38v5M5 24h5M38 24h5M10.6 10.6l3.5 3.5M33.9 33.9l3.5 3.5M10.6 37.4l3.5-3.5M33.9 14.1l3.5-3.5"/></g></svg>',
+ moon: '<svg viewBox="0 0 48 48"><path d="M30 8a16 16 0 1 0 10 26A14 14 0 0 1 30 8z" fill="#C9D3E6"/></svg>',
+ cloud: '<svg viewBox="0 0 48 48"><path d="M14 36a9 9 0 0 1-1-17.9A12 12 0 0 1 36 18a8 8 0 0 1-1 18z" fill="#A9B6C8"/></svg>',
+ pcloud: '<svg viewBox="0 0 48 48"><circle cx="17" cy="17" r="8" fill="#F6C431"/><path d="M18 40a8 8 0 0 1-1-15.9A11 11 0 0 1 38 24a7 7 0 0 1-1 16z" fill="#A9B6C8"/></svg>',
+ ncloud: '<svg viewBox="0 0 48 48"><path d="M22 6a11 11 0 1 0 7 19A10 10 0 0 1 22 6z" fill="#C9D3E6"/><path d="M18 40a8 8 0 0 1-1-15.9A11 11 0 0 1 38 24a7 7 0 0 1-1 16z" fill="#A9B6C8"/></svg>',
+ fog: '<svg viewBox="0 0 48 48"><g stroke="#A9B6C8" stroke-width="4" stroke-linecap="round"><path d="M8 18h32M12 26h26M8 34h30"/></g></svg>',
+ rain: '<svg viewBox="0 0 48 48"><path d="M14 30a9 9 0 0 1-1-17.9A12 12 0 0 1 36 12a8 8 0 0 1-1 18z" fill="#8D9AAE"/><g stroke="#2F7BE0" stroke-width="3.5" stroke-linecap="round"><path d="M16 35l-2 6M25 35l-2 6M34 35l-2 6"/></g></svg>',
+ snow: '<svg viewBox="0 0 48 48"><path d="M14 30a9 9 0 0 1-1-17.9A12 12 0 0 1 36 12a8 8 0 0 1-1 18z" fill="#8D9AAE"/><g fill="#7FB7FF"><circle cx="15" cy="38" r="2.6"/><circle cx="24" cy="42" r="2.6"/><circle cx="33" cy="38" r="2.6"/></g></svg>',
+ storm: '<svg viewBox="0 0 48 48"><path d="M14 30a9 9 0 0 1-1-17.9A12 12 0 0 1 36 12a8 8 0 0 1-1 18z" fill="#7d889c"/><path d="M26 30l-7 9h6l-3 7 9-11h-6l3-5z" fill="#F6C431"/></svg>'};
+function wxKind(c, day){
+  if (c === 0) return [day ? "sun" : "moon", "Ясно"];
+  if (c <= 2) return [day ? "pcloud" : "ncloud", "Мінлива хмарність"];
+  if (c === 3) return ["cloud", "Хмарно"];
+  if (c === 45 || c === 48) return ["fog", "Туман"];
+  if ((c >= 71 && c <= 77) || c === 85 || c === 86) return ["snow", "Сніг"];
+  if (c >= 95) return ["storm", "Гроза"];
+  if (c >= 51 && c <= 57) return ["rain", "Мряка"];
+  if (c >= 51) return ["rain", "Дощ"];
+  return ["cloud", "Хмарно"];
+}
+function sg(t){ t = Math.round(t); return (t > 0 ? "+" : "") + t + "°"; }
+function drawWx(){
+  if (!WX || !WX.ok){ $("wxt").textContent = "—"; $("wxd1").textContent = "Погода зараз недоступна"; $("wxf").textContent = ""; $("wxr").style.display = "none"; return; }
+  var c = WX.current, k = wxKind(c.code, c.day);
+  $("wxi").innerHTML = IC[k[0]].replace("<svg", '<svg class="wx-ic"');
+  $("wxt").textContent = sg(c.t); $("wxd1").textContent = k[1];
+  $("wxf").innerHTML = "Відчувається як " + sg(c.feels) + "<br>Вітер " + Math.round(c.wind) + " м/с";
+  // опади на найближчі 12 год
+  var H = WX.hourly || [], snowy = function(x){ var kk = wxKind(x.code, 1)[0]; return kk === "snow"; };
+  var wet = function(x){ return x.pr >= 0.1 || (x.pp >= 60 && /rain|snow|storm/.test(wxKind(x.code, 1)[0])); };
+  var txt, icon = "rain";
+  if (H.length && wet(H[0])){ var j = 0; while (j < H.length && wet(H[j])) j++; icon = snowy(H[0]) ? "snow" : "rain";
+    txt = (icon === "snow" ? "Сніг" : "Дощ") + (j >= H.length ? " — ще щонайменше 12 годин" : " до <b>" + H[j].time + "</b>, далі без опадів"); }
+  else { var f = -1; for (var i = 1; i < H.length; i++) if (wet(H[i])){ f = i; break; }
+    if (f > 0){ icon = snowy(H[f]) ? "snow" : "rain"; txt = (icon === "snow" ? "Сніг" : "Дощ") + " очікується з <b>" + H[f].time + "</b>"; }
+    else { icon = "sun"; txt = "Найближчі 12 годин без опадів"; } }
+  $("wxr").style.display = ""; $("wxr").innerHTML = IC[icon] + "<span>" + txt + "</span>";
+  var hh = []; for (var x = 1; x < H.length && hh.length < 6; x += 2) hh.push(H[x]);
+  $("wxh").innerHTML = hh.map(function(x){ var kk = wxKind(x.code, x.day); return '<div><b>' + x.time + '</b>' + IC[kk[0]] + '<strong>' + sg(x.t) + '</strong><i>' + (x.pp >= 30 ? x.pp + "%" : "") + '</i></div>'; }).join("");
+  var names = ["Сьогодні", "Завтра"];
+  $("wxd").innerHTML = (WX.daily || []).map(function(d, i){ var kk = wxKind(d.code, 1), p = d.date.split("-"),
+      nm = names[i] || ["неділя", "понеділок", "вівторок", "середа", "четвер", "п’ятниця", "субота"][new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay()];
+      nm = nm.charAt(0).toUpperCase() + nm.slice(1);
+      var pr = d.snow >= 0.2 ? "сніг " + (Math.round(d.snow * 10) / 10).toString().replace(".", ",") + " см" : d.rain >= 0.3 ? "дощ " + Math.round(d.rain) + " мм" : "без опадів";
+      if (pr.indexOf("дощ 0") === 0) pr = "невеликий дощ";
+      return '<div class="wx-day">' + IC[kk[0]] + '<span class="dn">' + nm + '<small>' + pr + '</small></span><span class="mm"><span>' + sg(d.min) + '</span> … ' + sg(d.max) + '</span></div>'; }).join("");
+}
+
+/* ---------- завантаження ---------- */
+var LAST = 0;
+function load(){
+  LAST = Date.now();
+  fetch(q("/api/state"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ ST = j; tick(); }).catch(function(){ $("upd").textContent = "немає зв’язку"; });
+  fetch(q("/api/weather"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ WX = j; drawWx(); }).catch(function(){ WX = null; drawWx(); });
+}
+document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - LAST > 60000) load(); });
+setInterval(function(){ if (ST) tick(); }, 30000);
+setInterval(function(){ if (!document.hidden) load(); }, 5 * 60000);
+
+$("seg").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; DAY = +b.getAttribute("data-d");
+  [].forEach.call($("seg").children, function(x){ x.classList.toggle("on", x === b); }); drawDial(); });
+
+/* ---------- шрифт ---------- */
+function setBig(v){ document.documentElement.dataset.big = v ? "1" : ""; $("bigtxt").textContent = v ? "Натисніть ще раз — звичайний" : "Зробити текст більшим"; LS.set("selo:big", v ? "1" : ""); }
+setBig(LS.get("selo:big") === "1");
+$("bigbtn").addEventListener("click", function(){ setBig(document.documentElement.dataset.big !== "1"); });
+
+/* ---------- тур ---------- */
+var TOUR = 0;
+function R_(id, pad){ var r = $(id).getBoundingClientRect(); pad = pad || 8; return {t: "r", x: r.left - pad, y: r.top - pad, w: r.width + 2 * pad, h: r.height + 2 * pad}; }
+function C_(rad){ var r = $("dial").getBoundingClientRect(), k = Math.min(r.width, r.height) / 440, ox = r.left + (r.width - 440 * k) / 2, oy = r.top + (r.height - 440 * k) / 2;
+  return {t: "c", cx: ox + 220 * k, cy: oy + 220 * k, r: rad * k}; }
+function ROWS(k){ var l = $("list"), n = Math.min(k, l.children.length), f = l.children[0].getBoundingClientRect(), z = l.children[n - 1].getBoundingClientRect();
+  return {t: "r", x: f.left - 8, y: f.top - 8, w: f.width + 16, h: z.bottom - f.top + 16}; }
+var STEPS = [
+  ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: є світло чи немає, і коли зміниться. Червона рамка — світла немає, зелена — є."],
+  ["dial", function(){ return [C_(178)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне — немає. Стрілка — котра зараз година. Те, що вже минуло, притемнене."],
+  ["dial", function(){ return [C_(100), R_("sun", 6)]; }, "Сонце: день і ніч", "Вузьке кільце в середині кола: жовте — поки світить сонце, темне — ніч. ☀ — схід, ☾ — захід. Точний час — у двох картках."],
+  ["seg", function(){ return [R_("seg", 6)]; }, "Сьогодні і завтра", "Натисніть «Завтра», щоб побачити графік на завтра. «Сьогодні» — повернутися."],
+  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "☀ — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз»."],
+  ["weather", function(){ return [R_("wxtop")]; }, "Погода", "Температура зараз, чи буде дощ або сніг і до котрої години, погода на найближчі години. Нижче — прогноз на 3 дні."],
+  ["stats", function(){ return [R_("statnums")]; }, "Скільки без світла", "Скільки годин без світла за графіком сьогодні, завтра і за останній тиждень."],
+  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Додати Сяйво на екран телефона, ще раз подивитися цей тур або зробити шрифт більшим."]];
+var DESK = function(){ return matchMedia("(min-width:1100px)").matches; };
+function tour(n){
+  TOUR = n; var ov = $("overlay");
+  if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; return; }
+  $("welcome").hidden = true; LS.set("selo:seen", "1");
+  if (!DESK()){ document.body.style.paddingBottom = "70vh";
+    var S0 = STEPS[n - 1]; $(S0[0]).scrollIntoView({block: "start"});
+    var hh = S0[1](), t0 = Math.min.apply(null, hh.map(function(o){ return o.t === "r" ? o.y : o.cy - o.r; })); window.scrollBy(0, t0 - 24); }
+  var S = STEPS[n - 1], holes = S[1](), dk = matchMedia("(prefers-color-scheme: dark)").matches, mask = "", rings = "";
+  holes.forEach(function(o){
+    if (o.t === "r"){ mask += '<rect x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" rx="20" fill="#000"/>';
+      rings += '<rect x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" rx="20" fill="url(#glow)" stroke="#FFD54A" stroke-width="4" filter="url(#sh)"/>'; }
+    else { mask += '<circle cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.r + '" fill="#000"/>';
+      rings += '<circle cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.r + '" fill="url(#glowc)" stroke="#FFD54A" stroke-width="4" filter="url(#sh)"/>'; } });
+  var W_ = innerWidth, H_ = innerHeight;
+  var svg = '<svg class="tourbg" width="' + W_ + '" height="' + H_ + '" viewBox="0 0 ' + W_ + ' ' + H_ + '"><defs><mask id="m"><rect width="100%" height="100%" fill="#fff"/>' + mask + '</mask>' +
+    '<linearGradient id="glow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE38A" stop-opacity="' + (dk ? .18 : .22) + '"/><stop offset="1" stop-color="#FFE38A" stop-opacity="0"/></linearGradient>' +
+    '<radialGradient id="glowc"><stop offset="0.55" stop-color="#FFE38A" stop-opacity="0"/><stop offset="1" stop-color="#FFE38A" stop-opacity="' + (dk ? .22 : .28) + '"/></radialGradient>' +
+    '<filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#FFD54A" flood-opacity=".9"/></filter></defs>' +
+    '<rect width="100%" height="100%" fill="rgba(4,8,15,.78)" mask="url(#m)" style="pointer-events:auto"/>' + rings + '</svg>';
+  var bot = Math.max.apply(null, holes.map(function(o){ return o.t === "r" ? o.y + o.h : o.cy + o.r; })),
+      top = Math.min.apply(null, holes.map(function(o){ return o.t === "r" ? o.y : o.cy - o.r; })),
+      lft = Math.min.apply(null, holes.map(function(o){ return o.t === "r" ? o.x : o.cx - o.r; })),
+      rgt = Math.max.apply(null, holes.map(function(o){ return o.t === "r" ? o.x + o.w : o.cx + o.r; }));
+  var pos, arrow = "";
+  if (DESK()){ // на комп'ютері — збоку від підсвіченого
+    var tw = 380, x = rgt + 20 + tw < W_ ? rgt + 20 : Math.max(12, lft - 20 - tw), y = Math.max(12, Math.min(H_ - 330, top));
+    pos = "left:" + x + "px;right:auto;top:" + y + "px;width:" + tw + "px";
+  } else { var below = H_ - bot > 300;
+    pos = below ? "top:" + (bot + 16) + "px" : (top > 300 ? "bottom:" + (H_ - top + 16) + "px" : "bottom:16px");
+    arrow = below ? '<i class="arr up"></i>' : (top > 300 ? '<i class="arr down"></i>' : ""); }
+  ov.innerHTML = svg + '<div class="tip" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
+    '<div class="stp">Крок ' + n + ' з ' + STEPS.length + '</div><h3>' + S[2] + '</h3><p>' + S[3] + '</p><div class="row"><button class="btn sec" data-t="' + (n > 1 ? n - 1 : 0) + '">' + (n > 1 ? "← Назад" : "Пропустити") + '</button><button class="btn pri" data-t="' + (n < STEPS.length ? n + 1 : 0) + '">' + (n < STEPS.length ? "Далі →" : "Зрозуміло ✓") + '</button></div></div>';
+}
+$("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b) tour(+b.getAttribute("data-t")); });
+addEventListener("resize", function(){ if (TOUR) tour(TOUR); });
+$("tourbtn").addEventListener("click", function(){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 50); });
+$("wgo").addEventListener("click", function(){ window.scrollTo(0, 0); tour(1); });
+$("wno").addEventListener("click", function(){ $("welcome").hidden = true; LS.set("selo:seen", "1"); });
+
+/* ---------- додати на екран ---------- */
+var UA = navigator.userAgent, IOS = /iPhone|iPad|iPod/.test(UA) || (UA.indexOf("Macintosh") >= 0 && navigator.maxTouchPoints > 1),
+    AND = /Android/.test(UA), INAPP = /Viber|Telegram|FBAN|FBAV|Instagram|Line\//i.test(UA) || typeof window.TelegramWebviewProxy !== "undefined",
+    STANDALONE = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true, BIP = null;
+addEventListener("beforeinstallprompt", function(e){ e.preventDefault(); BIP = e; if ($("instbtn")) $("instbtn").hidden = false; });
+addEventListener("appinstalled", function(){ BIP = null; closeSheet(); });
+if (STANDALONE) $("addbtn").style.display = "none";
+var SHARE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+var APPLE = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C5.9 6.8 4.3 7.8 3.4 9.4c-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.9 3.4-.9s2 .9 3.4.8c1.4 0 2.3-1.3 3.1-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-2.9-4.2zM13.9 4.9c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.1.1 2.3-.6 3-1.5z"/></svg>';
+var ANDR = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.6 9.5l1.8-3.1a.4.4 0 0 0-.7-.4l-1.8 3.1A11 11 0 0 0 12 8a11 11 0 0 0-4.9 1.1L5.3 6a.4.4 0 1 0-.7.4l1.8 3.1A10.4 10.4 0 0 0 1 18h22a10.4 10.4 0 0 0-5.4-8.5zM7 15.3a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2zm10 0a1.1 1.1 0 1 1 0-2.2 1.1 1.1 0 0 1 0 2.2z"/></svg>';
+function sheet(dev){
+  var body = "";
+  if (dev === "ios") body = (INAPP ? '<div class="note" style="margin:0 0 14px">⚠️ Ви відкрили Сяйво у Viber чи Telegram. Спершу натисніть <b>•••</b> або <b>⋯</b> і оберіть «Відкрити в Safari» — далі кроки нижче.</div>' : "") + '<ol class="steps">' +
+    '<li><span class="n">1</span><div><b>Натисніть <span class="kbd">•••</span> внизу праворуч</b><span>На старих iPhone — одразу кнопка <span class="kbd">' + SHARE + '</span> внизу посередині</span></div></li>' +
+    '<li><span class="n">2</span><div><b>Оберіть «Поділитися» <span class="kbd">' + SHARE + '</span></b><span>Відкриється список дій</span></div></li>' +
+    '<li><span class="n">3</span><div><b>Прогорніть униз і натисніть «На Початковий екран»</b><span>Біля пункту — квадратик із плюсом ⊞</span></div></li>' +
+    '<li><span class="n">4</span><div><b>Натисніть «Додати» вгорі праворуч</b><span>Готово! На екрані з’явиться значок «Сяйво» з хаткою</span></div></li></ol>';
+  else body = (INAPP ? '<div class="note" style="margin:0 0 14px">⚠️ Ви відкрили Сяйво у Viber чи Telegram. Натисніть <b>⋮</b> угорі праворуч і оберіть «Відкрити в Chrome» (або «у браузері») — далі кроки нижче.</div>' : "") +
+    '<button class="btn pri" id="instbtn" style="width:100%;min-height:68px;font-size:calc(22px*var(--fs))"' + (BIP ? "" : " hidden") + '>📲 Встановити Сяйво</button>' +
+    (BIP ? '<p style="margin:12px 0 10px">Натисніть кнопку вище, а потім «Встановити». Якщо не вийшло:</p>' : "") + '<ol class="steps">' +
+    '<li><span class="n">1</span><div><b>Натисніть <span class="kbd">⋮</span> угорі праворуч</b><span>Три крапки в Chrome (у Samsung — <span class="kbd">≡</span> унизу)</span></div></li>' +
+    '<li><span class="n">2</span><div><b>«Додати на головний екран»</b><span>Або «Встановити застосунок»</span></div></li>' +
+    '<li><span class="n">3</span><div><b>Натисніть «Встановити» чи «Додати»</b><span>Значок «Сяйво» з’явиться на екрані</span></div></li></ol>';
+  $("overlay").innerHTML = '<div class="sheet" id="sheet"><div class="sh"><h3>Додати на екран</h3><p>Який у вас телефон?</p>' +
+    '<div class="pick"><button data-dev="ios" class="' + (dev === "ios" ? "on" : "") + '">' + APPLE + 'iPhone</button><button data-dev="android" class="' + (dev === "android" ? "on" : "") + '">' + ANDR + 'Android</button></div>' + body +
+    '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div>';
+}
+function closeSheet(){ if ($("sheet")) $("overlay").innerHTML = ""; }
+$("addbtn").addEventListener("click", function(){ sheet(IOS ? "ios" : AND ? "android" : "ios"); });
+$("overlay").addEventListener("click", function(e){
+  var d = e.target.closest("[data-dev]"); if (d) return sheet(d.getAttribute("data-dev"));
+  if (e.target.id === "shclose" || e.target.id === "sheet") return closeSheet();
+  if (e.target.closest("#instbtn") && BIP){ BIP.prompt(); BIP.userChoice.then(function(){ BIP = null; closeSheet(); }); }
+});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function(){});
+
+/* ---------- старт ---------- */
+if (LS.get("selo:seen") !== "1" && !STANDALONE) $("welcome").hidden = false;
+tick(); load();
+</script>
+</body>
+</html>
