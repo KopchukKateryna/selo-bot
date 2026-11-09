@@ -203,14 +203,14 @@ button{font:inherit;cursor:pointer;color:inherit}
   .dial{max-height:calc(100vh - 250px);max-height:calc(100dvh - 250px)}
 }
 /* тур */
-.tourbg{position:fixed;inset:0;z-index:20;pointer-events:none;touch-action:none}
+.tourbg{position:absolute;left:0;top:0;z-index:20;pointer-events:none;touch-action:none}
 .tip{transition:opacity .25s}
 .arr{position:absolute;left:50%;width:0;height:0;margin-left:-12px;border:12px solid transparent}
 .arr.up{top:-24px;border-bottom-color:var(--surface)}
 .arr.down{bottom:-24px;border-top-color:var(--surface)}
 .dim{position:fixed;inset:0;z-index:20;pointer-events:none}
 .hole{position:absolute;border-radius:24px;box-shadow:0 0 0 4px #FFD54A,0 0 0 9999px rgba(5,10,18,.72)}
-.tip{position:fixed;left:14px;right:14px;z-index:21;background:var(--surface);color:var(--ink);border-radius:22px;padding:18px;
+.tip{position:absolute;left:14px;right:14px;z-index:21;background:var(--surface);color:var(--ink);border-radius:22px;padding:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.4)}
 .tip .stp{color:var(--accent);font-weight:800;font-size:calc(16px*var(--fs))}
 .tip h3{margin:4px 0 6px;font-size:calc(24px*var(--fs))}
@@ -616,33 +616,34 @@ function stopScroll(e){ if (TOUR){ e.preventDefault(); } }
 addEventListener("wheel", stopScroll, {passive: false});
 addEventListener("touchmove", stopScroll, {passive: false});
 addEventListener("keydown", function(e){ if (TOUR && ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].indexOf(e.key) >= 0) e.preventDefault(); });
+function docH(){ return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight); }
 function tour(n){
   TOUR = n; var ov = $("overlay");
-  if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; document.documentElement.style.overflow = ""; return; }
+  if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; return; }
   LS.set("selo:seen", "1");
-  document.documentElement.style.overflow = "hidden";
   if (DESK()) return drawTour(n);
   document.body.style.paddingBottom = "70vh";
   var hh = STEPS[n - 1][1](), t0 = Math.min.apply(null, hh.map(function(o){ return o.t === "r" ? o.y : o.cy - o.r; }));
   // поки сторінка пливе до наступного блоку — лише затемнення, без підказки
-  var tip = ov.querySelector(".tip"); if (tip) tip.style.opacity = "0";
-  var bg = ov.querySelector(".tourbg"); if (bg){ bg.querySelectorAll(".hl").forEach(function(x){ x.remove(); }); var m = bg.querySelector("mask"); if (m) [].slice.call(m.children, 1).forEach(function(x){ x.remove(); }); }
-  else ov.innerHTML = '<svg class="tourbg" width="' + innerWidth + '" height="' + innerHeight + '"><rect width="100%" height="100%" fill="rgba(4,8,15,.62)"/></svg>';
-  smoothTo(window.scrollY + t0 - 24, function(){ if (TOUR === n) drawTour(n); });
+  ov.innerHTML = '<svg class="tourbg" width="' + document.documentElement.clientWidth + '" height="' + docH() + '"><rect width="100%" height="100%" fill="rgba(4,8,15,.62)" style="pointer-events:auto"/></svg>';
+  smoothTo(Math.max(0, window.scrollY + t0 - 24), function(){ if (TOUR === n) drawTour(n); });
 }
 function drawTour(n){
   var ov = $("overlay");
-  var S = STEPS[n - 1], holes = S[1](), mask = "", rings = "";
+  // усе малюємо в координатах сторінки (не екрана), тож підсвічування не «з'їжджає», навіть якщо сторінка зрушиться
+  var sx = window.scrollX, sy = window.scrollY;
+  var S = STEPS[n - 1], holes = S[1]().map(function(o){ var c = {}; for (var k in o) c[k] = o[k];
+    if (c.t === "r"){ c.x += sx; c.y += sy; } else { c.cx += sx; c.cy += sy; } return c; }), mask = "", rings = "";
   holes.forEach(function(o){
     if (o.t === "r"){ mask += '<rect x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" rx="20" fill="#000"/>';
       rings += '<rect class="hl" x="' + o.x + '" y="' + o.y + '" width="' + o.w + '" height="' + o.h + '" rx="20" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"/>'; }
-    else if (o.t === "a"){ // саме кільце: внутрішня частина знову затемнена
+    else if (o.t === "a"){
       mask += '<circle cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.ro + '" fill="#000"/><circle cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.ri + '" fill="#fff"/>';
       rings += '<circle class="hl" cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.ro + '" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"/>' +
                '<circle class="hl" cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.ri + '" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"/>'; }
     else { mask += '<circle cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.r + '" fill="#000"/>';
       rings += '<circle class="hl" cx="' + o.cx + '" cy="' + o.cy + '" r="' + o.r + '" fill="none" stroke="rgba(255,255,255,.75)" stroke-width="2"/>'; } });
-  var W_ = innerWidth, H_ = innerHeight;
+  var W_ = document.documentElement.clientWidth, H_ = docH(), VH = window.innerHeight;
   var svg = '<svg class="tourbg" width="' + W_ + '" height="' + H_ + '" viewBox="0 0 ' + W_ + ' ' + H_ + '"><defs><mask id="m"><rect width="100%" height="100%" fill="#fff"/>' + mask + '</mask></defs>' +
     '<rect width="100%" height="100%" fill="rgba(4,8,15,.62)" mask="url(#m)" style="pointer-events:auto"/>' + rings + '</svg>';
   var bot = Math.max.apply(null, holes.map(function(o){ return o.t === "r" ? o.y + o.h : o.cy + o.r; })),
@@ -650,12 +651,15 @@ function drawTour(n){
       lft = Math.min.apply(null, holes.map(function(o){ return o.t === "r" ? o.x : o.cx - o.r; })),
       rgt = Math.max.apply(null, holes.map(function(o){ return o.t === "r" ? o.x + o.w : o.cx + o.r; }));
   var pos, arrow = "";
-  if (DESK()){ // на комп'ютері — збоку від підсвіченого
-    var tw = 380, x = rgt + 20 + tw < W_ ? rgt + 20 : Math.max(12, lft - 20 - tw), y = Math.max(12, Math.min(H_ - 330, top));
+  if (DESK()){
+    var tw = 380, x = rgt + 20 + tw < W_ ? rgt + 20 : Math.max(12, lft - 20 - tw), y = Math.max(sy + 12, Math.min(sy + VH - 330, top));
     pos = "left:" + x + "px;right:auto;top:" + y + "px;width:" + tw + "px";
-  } else { var below = H_ - bot > 300;
-    pos = below ? "top:" + (bot + 16) + "px" : (top > 300 ? "bottom:" + (H_ - top + 16) + "px" : "bottom:16px");
-    arrow = below ? '<i class="arr up"></i>' : (top > 300 ? '<i class="arr down"></i>' : ""); }
+  } else {
+    // підказка під підсвіченим, якщо влазить на екран; інакше над ним; інакше внизу екрана
+    var below = (sy + VH) - bot > 300, above = top - sy > 300;
+    pos = below ? "top:" + (bot + 16) + "px" : above ? "top:" + (top - 16) + "px;transform:translateY(-100%)" : "top:" + (sy + VH - 16) + "px;transform:translateY(-100%)";
+    arrow = below ? '<i class="arr up"></i>' : above ? '<i class="arr down"></i>' : "";
+  }
   ov.innerHTML = svg + '<div class="tip" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
     '<div class="stp">Крок ' + n + ' з ' + STEPS.length + '</div><h3>' + S[2] + '</h3><p>' + S[3] + '</p><div class="row"><button class="btn sec" data-t="' + (n > 1 ? n - 1 : 0) + '">' + (n > 1 ? "← Назад" : "Пропустити") + '</button><button class="btn pri" data-t="' + (n < STEPS.length ? n + 1 : 0) + '">' + (n < STEPS.length ? "Далі →" : "Зрозуміло ✓") + '</button></div></div>';
 }
@@ -663,7 +667,7 @@ $("overlay").addEventListener("click", function(e){ var b = e.target.closest("[d
   var f = e.target.closest("[data-fs]"); if (f) return setFs(FSI + (+f.getAttribute("data-fs")));
   var hh = e.target.closest("[data-h]"); if (hh){ LS.set("selo:seen", "1"); $("overlay").innerHTML = "";
     if (hh.getAttribute("data-h") === "tour"){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 60); } } });
-addEventListener("resize", function(){ if (TOUR && !window.__scrolling) drawTour(TOUR); });
+addEventListener("resize", function(){ if (TOUR) drawTour(TOUR); });
 $("tourbtn").addEventListener("click", function(){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 50); });
 
 /* ---------- додати на екран ---------- */
