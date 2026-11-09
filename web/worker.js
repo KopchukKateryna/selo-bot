@@ -120,6 +120,76 @@ async function apiWeather() {
     rain: (d.rain_sum ? d.rain_sum[i] || 0 : 0) + (d.showers_sum ? d.showers_sum[i] || 0 : 0), snow: d.snowfall_sum ? d.snowfall_sum[i] || 0 : 0}));
   return {ok: true, current: {t: c.temperature_2m, feels: c.apparent_temperature, code: c.weather_code, wind: c.wind_speed_10m, day: c.is_day === 1}, hourly, daily};
 }
+let DBREADY = false;
+async function sdb(env) {
+  if (!env.DB) return null;
+  if (!DBREADY) {
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS hits (ts INTEGER, day TEXT, hour INTEGER, uid TEXT, ev TEXT, sa INTEGER, dev TEXT, fs INTEGER)").run();
+    await env.DB.prepare("CREATE INDEX IF NOT EXISTS hits_day ON hits(day)").run();
+    DBREADY = true;
+  }
+  return env.DB;
+}
+function kyivHour(d = new Date()) { return +new Intl.DateTimeFormat("en-GB", {timeZone: "Europe/Kyiv", hour: "2-digit", hourCycle: "h23"}).format(d); }
+async function hit(req, env) {
+  let b; try { b = await req.json(); } catch (e) { return new Response(null, {status: 204}); }
+  const uid = String(b.uid || ""), ev = String(b.ev || "");
+  if (!/^[a-z0-9-]{8,40}$/.test(uid) || ["open", "tour", "font"].indexOf(ev) < 0) return new Response(null, {status: 204});
+  if (/bot|crawl|spider|preview/i.test(req.headers.get("user-agent") || "")) return new Response(null, {status: 204});
+  const dev = ["ios", "android", "desktop"].indexOf(b.dev) >= 0 ? b.dev : "other";
+  const db = await sdb(env); if (!db) return new Response(null, {status: 204});
+  const now = new Date();
+  await db.prepare("INSERT INTO hits (ts, day, hour, uid, ev, sa, dev, fs) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+    .bind(now.getTime(), kyivDate(now), kyivHour(now), uid, ev, b.sa ? 1 : 0, dev, Math.max(0, Math.min(4, +b.fs || 0))).run();
+  return new Response(null, {status: 204});
+}
+function statsAccess(req, env, url) {
+  const key = env.STATS_KEY; if (!key) return {ok: false};
+  const k = url.searchParams.get("k");
+  if (k && k === key) return {ok: true, set: true};
+  return {ok: getCookie(req, "selost") === key};
+}
+async function apiStats(env) {
+  const db = await sdb(env); if (!db) return {ok: false, error: "немає бази"};
+  const today = kyivDate(), from = addDay(today, -13);
+  const all = r => (r.results || []);
+  const q = (sql, ...a) => db.prepare(sql).bind(...a).all().then(all);
+  const one = async (sql, ...a) => (await q(sql, ...a))[0] || {};
+  const [tot, days, first, sa, dev, tour, big, hours] = await Promise.all([
+    one("SELECT COUNT(DISTINCT uid) AS users, SUM(ev = 'open') AS opens FROM hits"),
+    q("SELECT day, SUM(ev = 'open') AS opens, COUNT(DISTINCT uid) AS users FROM hits WHERE day >= ? GROUP BY day", from),
+    q("SELECT f AS day, COUNT(*) AS n FROM (SELECT uid, MIN(day) AS f FROM hits GROUP BY uid) WHERE f >= ? GROUP BY f", from),
+    q("SELECT sa, COUNT(*) AS opens, COUNT(DISTINCT uid) AS users FROM hits WHERE ev = 'open' AND day >= ? GROUP BY sa", from),
+    q("SELECT dev, COUNT(DISTINCT uid) AS users FROM hits WHERE day >= ? GROUP BY dev", from),
+    one("SELECT COUNT(DISTINCT uid) AS users FROM hits WHERE ev = 'tour'"),
+    one("SELECT COUNT(DISTINCT uid) AS users FROM hits WHERE fs >= 2"),
+    q("SELECT hour, COUNT(*) AS opens FROM hits WHERE ev = 'open' AND day >= ? GROUP BY hour", addDay(today, -6)),
+  ]);
+  const nf = {}; first.forEach(r => nf[r.day] = r.n);
+  const dm = {}; days.forEach(r => dm[r.day] = r);
+  const series = []; for (let i = 13; i >= 0; i--) { const d = addDay(today, -i); series.push({day: d, opens: (dm[d] || {}).opens || 0, users: (dm[d] || {}).users || 0, fresh: nf[d] || 0}); }
+  return {ok: true, today, total: {users: tot.users || 0, opens: tot.opens || 0}, series, sa, dev, tour: tour.users || 0, bigFont: big.users || 0, hours};
+}
+const STATS_PAGE = "<!doctype html><html lang=\"uk\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>Статистика · Сяйво Наливайківки</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\"><link href=\"https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap\" rel=\"stylesheet\"><style>" +
+  ":root{--bg:#F2F4F7;--surface:#fff;--ink:#14202E;--muted:#66758A;--line:#E3E8EE;--accent:#3566D6;--on:#1F8A70;--warm:#E39A1C}@media(prefers-color-scheme:dark){:root{--bg:#0E1621;--surface:#152233;--ink:#E6ECF3;--muted:#8FA0B5;--line:#22324A;--accent:#6E9BFF;--on:#35B88F;--warm:#F0B44A}}" +
+  "*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Onest,system-ui,sans-serif;font-size:15px}.wrap{max-width:1100px;margin:0 auto;padding:16px}h1{margin:4px 0 2px;font-size:22px;text-align:center}.sub{text-align:center;color:var(--muted);font-size:13px;margin:0 0 14px}" +
+  ".grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}.card{background:var(--surface);border-radius:16px;padding:14px 16px}.card h2{margin:0 0 10px;font-size:15px}.k span{display:block;color:var(--muted);font-size:12.5px}.k b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}.k small{display:block;color:var(--muted);font-size:12px}" +
+  ".row2{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:12px}.bars{display:flex;align-items:flex-end;gap:4px;height:150px;margin-top:6px}.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0}.bars .p{display:flex;align-items:flex-end;gap:2px;width:100%;flex:1}.bars i,.bars u{display:block;flex:1;border-radius:3px 3px 0 0;background:var(--accent)}.bars u{background:var(--on)}.bars em{font-style:normal;font-size:10.5px;color:var(--muted);margin-top:4px;white-space:nowrap}.bars em s{text-decoration:none}@media(max-width:600px){.bars em s{display:none}}.bars b{font-size:11px;font-variant-numeric:tabular-nums}" +
+  ".lg{display:flex;gap:14px;font-size:12.5px;color:var(--muted);margin-top:8px}.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}.sh{display:flex;align-items:center;gap:10px;margin:8px 0;font-size:14px}.sh span{width:120px;flex:none}.sh .b{flex:1;height:14px;border-radius:7px;background:var(--line);overflow:hidden}.sh .b i{display:block;height:100%;background:var(--accent)}.sh b{width:92px;flex:none;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.sh b small{color:var(--muted);font-weight:600}@media(max-width:600px){.sh span{width:104px}}" +
+  ".hrs{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;align-items:end;height:90px}.hrs i{display:block;border-radius:2px 2px 0 0;background:var(--warm)}.hx{display:grid;grid-template-columns:repeat(24,1fr);font-size:10px;color:var(--muted);margin-top:3px}.note{color:var(--muted);font-size:12.5px;margin-top:14px;text-align:center}</style></head><body><div class=\"wrap\"><h1>📊 Статистика Сяйва Наливайківки</h1><p class=\"sub\" id=\"sub\">завантаження…</p><div id=\"app\"></div>" +
+  "<p class=\"note\">Люди рахуються за анонімним номером браузера (без імен, телефонів і IP). Один телефон = одна людина, навіть якщо відкриває багато разів.</p></div><script>" +
+  "function n(x){return String(x||0)}function pct(a,b){return b?Math.round(a*100/b)+'%':'—'}var DW=['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];" +
+  "fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){if(!s.ok){document.getElementById('sub').textContent='Немає даних: '+(s.error||'');return}" +
+  "var t=s.series[s.series.length-1],y=s.series[s.series.length-2]||{},mx=Math.max.apply(null,s.series.map(function(d){return Math.max(d.opens,d.users,1)}));" +
+  "document.getElementById('sub').textContent='Оновлено '+new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})+' · дані з першого дня роботи Сяйва села';" +
+  "var h='<div class=\"grid\"><div class=\"card k\"><span>Усього людей</span><b>'+n(s.total.users)+'</b><small>за весь час</small></div><div class=\"card k\"><span>Сьогодні відкривали</span><b>'+n(t.opens)+'</b><small>учора '+n(y.opens)+'</small></div><div class=\"card k\"><span>Людей сьогодні</span><b>'+n(t.users)+'</b><small>учора '+n(y.users)+'</small></div><div class=\"card k\"><span>Нових сьогодні</span><b>'+n(t.fresh)+'</b><small>учора '+n(y.fresh)+'</small></div></div>';" +
+  "h+='<div class=\"row2\"><div class=\"card\"><h2>Останні 14 днів</h2><div class=\"bars\">'+s.series.map(function(d){var p=d.day.split('-'),w=DW[new Date(Date.UTC(+p[0],+p[1]-1,+p[2])).getUTCDay()];return '<div title=\"'+d.day+': відкриттів '+d.opens+', людей '+d.users+', нових '+d.fresh+'\"><b>'+(d.opens||'')+'</b><span class=\"p\"><i style=\"height:'+(d.opens/mx*100)+'%\"></i><u style=\"height:'+(d.users/mx*100)+'%\"></u></span><em><s>'+w+' </s>'+(+p[2])+'</em></div>'}).join('')+'</div><div class=\"lg\"><span><i style=\"background:var(--accent)\"></i>відкриття</span><span><i style=\"background:var(--on)\"></i>люди</span></div></div>';" +
+  "var su=0,ss=0;(s.sa||[]).forEach(function(r){su+=r.opens;if(r.sa)ss+=r.opens});var du=0,dv={};(s.dev||[]).forEach(function(r){du+=r.users;dv[r.dev]=r.users});" +
+  "function sh(l,a,b){return '<div class=\"sh\"><span>'+l+'</span><div class=\"b\"><i style=\"width:'+(b?a*100/b:0)+'%\"></i></div><b>'+pct(a,b)+' <small>('+n(a)+')</small></b></div>'}" +
+  "h+='<div class=\"card\"><h2>Як користуються (14 днів)</h2>'+sh('📲 зі значка',ss,su)+sh('🌐 у браузері',su-ss,su)+'<div style=\"height:8px\"></div>'+sh('iPhone',dv.ios||0,du)+sh('Android',dv.android||0,du)+sh('Комп’ютер',dv.desktop||0,du)+(dv.other?sh('Інше',dv.other,du):'')+'<div style=\"height:8px\"></div>'+sh('Пройшли тур',s.tour,s.total.users)+sh('Більший шрифт',s.bigFont,s.total.users)+'</div></div>';" +
+  "var hm={},hx=1;(s.hours||[]).forEach(function(r){hm[r.hour]=r.opens;hx=Math.max(hx,r.opens)});var hh='',lb='';for(var i=0;i<24;i++){hh+='<i title=\"'+i+':00 — '+(hm[i]||0)+'\" style=\"height:'+((hm[i]||0)/hx*100)+'%\"></i>';lb+='<span>'+(i%3?'':String(i).padStart(2,'0'))+'</span>'}" +
+  "h+='<div class=\"card\" style=\"margin-top:12px\"><h2>Коли відкривають (останні 7 днів, за годинами)</h2><div class=\"hrs\">'+hh+'</div><div class=\"hx\">'+lb+'</div></div>';document.getElementById('app').innerHTML=h})" +
+  ".catch(function(){document.getElementById('sub').textContent='Не вдалося завантажити'});</script></body></html>";
 function manifest(a) {
   const k = a.k ? "?k=" + encodeURIComponent(a.k) : "";
   return {name: "Сяйво Наливайківки", short_name: "Сяйво", lang: "uk", start_url: "/" + k, scope: "/", display: "standalone",
@@ -136,6 +206,14 @@ export default {
     const p = url.pathname;
     try {
       if (p === "/ingest" && req.method === "POST") return await ingest(req, env);
+      if (p === "/stats" || p === "/api/stats") {
+        const sa = statsAccess(req, env, url);
+        if (!sa.ok) return new Response("Немає доступу", {status: 403, headers: {"content-type": "text/plain; charset=utf-8"}});
+        const hd = {"cache-control": "no-store", "x-robots-tag": "noindex"};
+        if (sa.set) hd["set-cookie"] = "selost=" + encodeURIComponent(env.STATS_KEY) + "; Path=/; Max-Age=31536000; Secure; HttpOnly; SameSite=Lax";
+        if (p === "/api/stats") return json(await apiStats(env), 200, hd);
+        return new Response(STATS_PAGE, {headers: {...hd, "content-type": "text/html; charset=utf-8"}});
+      }
       if (p === "/health") { const s = await readState(env); return json({ok: true, checked_at: s.checked_at || null, updated_at: s.updated_at || null, err: s.err || null, days: Object.keys(s.days || {})}); }
       const IMG = {"/icon-180.png": "icon-180.png", "/apple-touch-icon.png": "icon-180.png", "/apple-touch-icon-precomposed.png": "icon-180.png",
         "/icon-192.png": "icon-192.png", "/icon-512.png": "icon-512.png", "/favicon.ico": "icon-192.png"};
@@ -154,6 +232,7 @@ export default {
         ctx.waitUntil(cache.put(key, new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=60"}})));
         return new Response(body, {headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
       }
+      if (p === "/api/hit" && req.method === "POST") { try { return await hit(req, env); } catch (e) { return new Response(null, {status: 204}); } }
       if (p === "/api/weather") {
         try { return json(await apiWeather()); }
         catch (e) { return json({ok: false, error: String(e.message || e)}, 502); }

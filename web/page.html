@@ -569,7 +569,8 @@ $("seg").addEventListener("click", function(e){ var b = e.target.closest("button
 var FS = [0.8, 0.9, 1.0, 1.15, 1.3], FSI = 0;
 function setFs(i){ FSI = Math.max(0, Math.min(FS.length - 1, i));
   document.documentElement.style.setProperty("--u", FS[FSI]); document.documentElement.dataset.roomy = FSI >= 2 ? "1" : "";
-  LS.set("selo:fs", String(FSI)); drawFsz(); if (ST) tick(); }
+  LS.set("selo:fs", String(FSI)); drawFsz(); if (ST) tick();
+  if (typeof sendHit === "function" && window.__fsInit){ clearTimeout(FSTIMER); FSTIMER = setTimeout(function(){ sendHit("font"); }, 3000); } window.__fsInit = true; }
 function fszHtml(){ return '<div class="fsz"><button type="button" data-fs="-1" aria-label="Менший шрифт">А−</button><div class="mid"><div class="aa">Аа</div><div class="dots">' +
   FS.map(function(_, i){ return '<i class="' + (i <= FSI ? "on" : "") + '"></i>'; }).join("") + '</div></div><button type="button" data-fs="1" aria-label="Більший шрифт">А+</button></div>' +
   '<div class="fsz-l"><span>менше</span><span>більше</span></div>'; }
@@ -663,7 +664,7 @@ function drawTour(n){
   ov.innerHTML = svg + '<div class="tip" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
     '<div class="stp">Крок ' + n + ' з ' + STEPS.length + '</div><h3>' + S[2] + '</h3><p>' + S[3] + '</p><div class="row"><button class="btn sec" data-t="' + (n > 1 ? n - 1 : 0) + '">' + (n > 1 ? "← Назад" : "Пропустити") + '</button><button class="btn pri" data-t="' + (n < STEPS.length ? n + 1 : 0) + '">' + (n < STEPS.length ? "Далі →" : "Зрозуміло ✓") + '</button></div></div>';
 }
-$("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b) return tour(+b.getAttribute("data-t"));
+$("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b){ if (TOUR === STEPS.length && +b.getAttribute("data-t") === 0) sendHit("tour"); return tour(+b.getAttribute("data-t")); }
   var f = e.target.closest("[data-fs]"); if (f) return setFs(FSI + (+f.getAttribute("data-fs")));
   var hh = e.target.closest("[data-h]"); if (hh){ LS.set("selo:seen", "1"); $("overlay").innerHTML = "";
     if (hh.getAttribute("data-h") === "tour"){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 60); } } });
@@ -706,12 +707,24 @@ $("overlay").addEventListener("click", function(e){
 });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function(){});
 
+/* ---------- анонімна статистика (номер браузера, без імен і IP) ---------- */
+var UID = LS.get("selo:uid");
+if (!UID){ UID = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).toLowerCase(); LS.set("selo:uid", UID); }
+var DEV = IOS ? "ios" : AND ? "android" : (matchMedia("(pointer:fine)").matches ? "desktop" : "other"), LASTOPEN = 0, FSTIMER = 0;
+function sendHit(ev){
+  try { var body = JSON.stringify({uid: UID, ev: ev, sa: STANDALONE ? 1 : 0, dev: DEV, fs: FSI});
+    if (navigator.sendBeacon) navigator.sendBeacon(q("/api/hit"), new Blob([body], {type: "application/json"}));
+    else fetch(q("/api/hit"), {method: "POST", body: body, headers: {"content-type": "application/json"}, keepalive: true}); } catch (e) {}
+}
+function opened(){ if (Date.now() - LASTOPEN > 30 * 60000){ LASTOPEN = Date.now(); sendHit("open"); } }
+document.addEventListener("visibilitychange", function(){ if (!document.hidden) opened(); });
+
 /* ---------- старт ---------- */
 if (LS.get("selo:seen") !== "1") hello(true);
 // вітальне вікно не зникає саме: якщо телефон перезавантажив сторінку чи її згорнули — показуємо знову, поки людина не натисне кнопку
 document.addEventListener("visibilitychange", function(){ if (!document.hidden && LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
 addEventListener("pageshow", function(){ if (LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
-tick(); load();
+tick(); load(); opened();
 </script>
 </body>
 </html>
