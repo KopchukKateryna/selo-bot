@@ -22,13 +22,13 @@
 
 :root{
   --bg:#F2F4F7; --surface:#FFFFFF; --ink:#101A26; --muted:#4F5E70; --line:#D9E0E8; --accent:#2457C9;
-  --on:#17805F; --off:#C2341F; --maybe:#9A6B00; --sky1:#1B2A4A; --fs:1;
+  --on:#17805F; --off:#C2341F; --maybe:#9A6B00; --sky1:#1B2A4A; --base:1; --u:.8; --fs:calc(var(--base) * var(--u));
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0E1621; --surface:#172538; --ink:#F1F5FA; --muted:#AEBCCD; --line:#2A3C56; --accent:#7EA6FF;
     --on:#3DCB9C; --off:#FF7A66; --maybe:#F0C24B; }
 }
-html[data-big="1"]{ --fs:1.18 }
+
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   font-size:calc(20px*var(--fs));line-height:1.35;-webkit-text-size-adjust:100%}
@@ -134,7 +134,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 
 /* ===== комп'ютер: усе на одному екрані ===== */
 @media (min-width:1100px){
-  :root{--fs:.9}
+  :root{--base:1.08}
   body{overflow:hidden}
   .wrap{max-width:none;height:100vh;height:100dvh;padding:12px 18px;display:grid;gap:12px;
     grid-template-columns:minmax(290px,23fr) minmax(0,52fr) minmax(300px,25fr);
@@ -185,9 +185,9 @@ button{font:inherit;cursor:pointer;color:inherit}
   .wx-t{font-size:calc(52px*var(--fs))}
   .wx-ic{width:62px;height:62px}
 }
-@media (min-width:1100px) and (min-height:900px){ :root{--fs:1.02} .wrap{padding:18px 24px;gap:16px} }
+@media (min-width:1100px) and (min-height:900px){ :root{--base:1.18} .wrap{padding:18px 24px;gap:16px} }
 @media (min-width:1100px) and (max-height:760px){
-  :root{--fs:.84}
+  :root{--base:1}
   .card{padding:12px 14px}
   .now{padding:12px 14px 14px}
   .now .ic{width:52px;height:52px}
@@ -239,6 +239,32 @@ button{font:inherit;cursor:pointer;color:inherit}
 .kbd svg{width:24px;height:24px}
 .note{margin-top:14px;padding:12px 14px;border-radius:16px;background:color-mix(in srgb,var(--maybe) 16%,var(--surface));font-size:calc(18px*var(--fs))}
 
+/* користувач збільшив шрифт — на комп'ютері дозволяємо прокрутку */
+@media (min-width:1100px){
+  html[data-roomy="1"] body{overflow:auto}
+  html[data-roomy="1"] .wrap{height:auto;min-height:100vh}
+  html[data-roomy="1"] #stats,html[data-roomy="1"] #weather{overflow:visible}
+  html[data-roomy="1"] .dial{max-height:none}
+}
+/* вітальне вікно і розмір шрифту */
+.hello{position:fixed;inset:0;z-index:40;background:rgba(4,8,15,.6);display:flex;align-items:flex-end;justify-content:center}
+.hello .box{width:100%;max-width:560px;max-height:94vh;overflow:auto;background:var(--surface);border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom))}
+@media (min-width:700px){ .hello{align-items:center} .hello .box{border-radius:26px} }
+.hello h3{margin:0 0 8px;font-size:calc(26px*var(--fs));line-height:1.2}
+.hello p{margin:0 0 12px;font-size:calc(19px*var(--fs));color:var(--muted)}
+.hello p b{color:var(--ink)}
+.fsz{display:flex;align-items:center;gap:10px;margin:14px 0 6px;padding:12px;border-radius:18px;background:var(--bg)}
+.fsz button{flex:none;width:76px;min-height:60px;border-radius:14px;border:2px solid var(--line);background:var(--surface);font-weight:800;font-size:22px}
+.fsz button:disabled{opacity:.35}
+.fsz .mid{flex:1;text-align:center}
+.fsz .aa{font-weight:800;font-size:calc(30px*var(--fs));line-height:1.1}
+.fsz .dots{display:flex;justify-content:center;gap:6px;margin:6px 0 0}
+.fsz .dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.fsz .dots i.on{background:var(--accent)}
+.fsz-l{display:flex;justify-content:space-between;color:var(--muted);font-size:calc(15px*var(--fs));margin:0 4px 14px}
+.hello .acts{display:grid;gap:10px;margin-top:6px}
+.hello .acts .btn{width:100%}
+
 .alert{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:16px;font-weight:600;font-size:calc(18px*var(--fs));
   background:color-mix(in srgb,var(--maybe) 18%,var(--surface));border:2px solid color-mix(in srgb,var(--maybe) 45%,transparent)}
 .alert[hidden]{display:none}
@@ -257,10 +283,6 @@ button{font:inherit;cursor:pointer;color:inherit}
 
   <p class="alert" id="alert" hidden></p>
 
-  <section class="welcome" id="welcome" hidden>
-    <b>👋 Вперше тут? Покажу, як усе працює — це 1 хвилина.</b>
-    <div class="row"><button class="btn pri" id="wgo">Показати</button><button class="btn sec" id="wno"><span class="lg2">Не треба</span><span class="sm2">✕</span></button></div>
-  </section>
 
   <section class="now" id="now" style="--c:var(--muted)">
     <div class="st">
@@ -299,7 +321,7 @@ button{font:inherit;cursor:pointer;color:inherit}
   <section class="tools" id="tools">
     <button class="tool" id="addbtn"><span class="ti">📲</span><span><em class="lg">Додати на екран телефона</em><em class="sm">На екран</em><small>Щоб відкривати одним дотиком</small></span></button>
     <button class="tool" id="tourbtn"><span class="ti">?</span><span><em class="lg">Як користуватися</em><em class="sm">Підказки</em><small>Покажу ще раз, крок за кроком</small></span></button>
-    <button class="tool" id="bigbtn"><span class="ti">А+</span><span><em class="lg">Більший шрифт</em><em class="sm">Шрифт</em><small id="bigtxt">Зробити текст більшим</small></span></button>
+    <button class="tool" id="bigbtn"><span class="ti">Аа</span><span><em class="lg">Розмір шрифту</em><em class="sm">Шрифт</em><small>Зробити текст більшим чи меншим</small></span></button>
   </section>
   <p class="foot" id="foot">Графік — із сайту ДТЕК, оновлюється кожні 10 хв. Погода — модель Open-Meteo.<br>Під час екстрених відключень графік може не діяти.</p>
 </div>
@@ -543,10 +565,27 @@ setInterval(function(){ if (!document.hidden) load(); }, 5 * 60000);
 $("seg").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; DAY = +b.getAttribute("data-d");
   [].forEach.call($("seg").children, function(x){ x.classList.toggle("on", x === b); }); drawDial(); });
 
-/* ---------- шрифт ---------- */
-function setBig(v){ document.documentElement.dataset.big = v ? "1" : ""; $("bigtxt").textContent = v ? "Натисніть ще раз — звичайний" : "Зробити текст більшим"; LS.set("selo:big", v ? "1" : ""); }
-setBig(LS.get("selo:big") === "1");
-$("bigbtn").addEventListener("click", function(){ setBig(document.documentElement.dataset.big !== "1"); });
+/* ---------- розмір шрифту ---------- */
+var FS = [0.8, 0.9, 1.0, 1.15, 1.3], FSI = 0;
+function setFs(i){ FSI = Math.max(0, Math.min(FS.length - 1, i));
+  document.documentElement.style.setProperty("--u", FS[FSI]); document.documentElement.dataset.roomy = FSI >= 2 ? "1" : "";
+  LS.set("selo:fs", String(FSI)); drawFsz(); if (ST) tick(); }
+function fszHtml(){ return '<div class="fsz"><button type="button" data-fs="-1" aria-label="Менший шрифт">А−</button><div class="mid"><div class="aa">Аа</div><div class="dots">' +
+  FS.map(function(_, i){ return '<i class="' + (i <= FSI ? "on" : "") + '"></i>'; }).join("") + '</div></div><button type="button" data-fs="1" aria-label="Більший шрифт">А+</button></div>' +
+  '<div class="fsz-l"><span>менше</span><span>більше</span></div>'; }
+function drawFsz(){ var z = document.querySelector(".hello .fszw"); if (z) z.innerHTML = fszHtml();
+  [].forEach.call(document.querySelectorAll(".hello [data-fs]"), function(b){ var d = +b.getAttribute("data-fs"); b.disabled = d < 0 ? FSI === 0 : FSI === FS.length - 1; }); }
+function hello(first){
+  var box = first ?
+    '<h3>👋 Вітаємо! Це «Сяйво Наливайківки»</h3><p>Тут видно, коли в селі буде світло за графіком ДТЕК (черга 6.2), погоду, схід і захід сонця.</p>' +
+    '<p><b>Зручно читати?</b> Якщо текст замалий — натискайте «А+», поки не стане зручно. Змінити розмір можна будь-коли кнопкою «Розмір шрифту» внизу сторінки.</p>' +
+    '<div class="fszw"></div><div class="acts"><button class="btn pri" data-h="tour">Показати, як користуватися</button><button class="btn sec" data-h="close">Усе зрозуміло</button></div>'
+    : '<h3>Розмір шрифту</h3><p>Натискайте «А+» або «А−», поки текст не стане зручним. Сяйво запам’ятає ваш вибір.</p><div class="fszw"></div><div class="acts"><button class="btn pri" data-h="close">Готово</button></div>';
+  $("overlay").innerHTML = '<div class="hello" id="hello"><div class="box" role="dialog" aria-modal="true">' + box + '</div></div>';
+  drawFsz();
+}
+setFs(+(LS.get("selo:fs") || 0));
+$("bigbtn").addEventListener("click", function(){ hello(false); });
 
 /* ---------- тур ---------- */
 var TOUR = 0;
@@ -563,12 +602,12 @@ var STEPS = [
   ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "☀ — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз»."],
   ["weather", function(){ return [R_("wxtop")]; }, "Погода", "Температура зараз, чи буде дощ або сніг і до котрої години, погода на найближчі години. Нижче — прогноз на 3 дні."],
   ["stats", function(){ return [R_("statnums")]; }, "Скільки без світла", "Скільки годин без світла за графіком сьогодні, завтра і за останній тиждень."],
-  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Додати Сяйво на екран телефона, ще раз подивитися цей тур або зробити шрифт більшим."]];
+  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Додати Сяйво на екран телефона, ще раз подивитися цей тур або змінити розмір шрифту."]];
 var DESK = function(){ return matchMedia("(min-width:1100px)").matches; };
 function tour(n){
   TOUR = n; var ov = $("overlay");
   if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; return; }
-  $("welcome").hidden = true; LS.set("selo:seen", "1");
+  LS.set("selo:seen", "1");
   if (!DESK()){ document.body.style.paddingBottom = "70vh";
     var S0 = STEPS[n - 1]; $(S0[0]).scrollIntoView({block: "start"});
     var hh = S0[1](), t0 = Math.min.apply(null, hh.map(function(o){ return o.t === "r" ? o.y : o.cy - o.r; })); window.scrollBy(0, t0 - 24); }
@@ -598,11 +637,12 @@ function tour(n){
   ov.innerHTML = svg + '<div class="tip" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
     '<div class="stp">Крок ' + n + ' з ' + STEPS.length + '</div><h3>' + S[2] + '</h3><p>' + S[3] + '</p><div class="row"><button class="btn sec" data-t="' + (n > 1 ? n - 1 : 0) + '">' + (n > 1 ? "← Назад" : "Пропустити") + '</button><button class="btn pri" data-t="' + (n < STEPS.length ? n + 1 : 0) + '">' + (n < STEPS.length ? "Далі →" : "Зрозуміло ✓") + '</button></div></div>';
 }
-$("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b) tour(+b.getAttribute("data-t")); });
+$("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b) return tour(+b.getAttribute("data-t"));
+  var f = e.target.closest("[data-fs]"); if (f) return setFs(FSI + (+f.getAttribute("data-fs")));
+  var hh = e.target.closest("[data-h]"); if (hh){ LS.set("selo:seen", "1"); $("overlay").innerHTML = "";
+    if (hh.getAttribute("data-h") === "tour"){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 60); } } });
 addEventListener("resize", function(){ if (TOUR) tour(TOUR); });
 $("tourbtn").addEventListener("click", function(){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 50); });
-$("wgo").addEventListener("click", function(){ window.scrollTo(0, 0); tour(1); });
-$("wno").addEventListener("click", function(){ $("welcome").hidden = true; LS.set("selo:seen", "1"); });
 
 /* ---------- додати на екран ---------- */
 var UA = navigator.userAgent, IOS = /iPhone|iPad|iPod/.test(UA) || (UA.indexOf("Macintosh") >= 0 && navigator.maxTouchPoints > 1),
@@ -641,7 +681,7 @@ $("overlay").addEventListener("click", function(e){
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function(){});
 
 /* ---------- старт ---------- */
-if (LS.get("selo:seen") !== "1" && !STANDALONE) $("welcome").hidden = false;
+if (LS.get("selo:seen") !== "1") hello(true);
 tick(); load();
 </script>
 </body>
