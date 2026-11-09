@@ -5,6 +5,10 @@ on:
     - cron: "*/10 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 concurrency:
   group: scrape-selo
   cancel-in-progress: false
@@ -31,9 +35,8 @@ jobs:
       - name: Scrape DTEK and send to the village Worker
         run: xvfb-run -a python scraper/scrape.py
         env:
-          WORKER_URL: ${{ secrets.WORKER_URL }}
-          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+          WORKER_URL: https://selo-bot.kopchuk-maksym.workers.dev
           DTEK_SITE: krem
-          CITY: ${{ secrets.CITY }}
-          STREET: ${{ secrets.STREET }}
-          HOUSE: ${{ secrets.HOUSE }}
+          CITY: с. Наливайківка
+          STREET: вул. Центральна
+          HOUSE: "1"

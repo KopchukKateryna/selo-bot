@@ -1,7 +1,7 @@
 """Скрапер «Сяйва Наливайківки» (тест): графік ДТЕК для черги села -> окремий Worker (/ingest).
 
-Запускається в GitHub Actions кожні ~10 хв. Адреса будинку (будь-який будинок черги 6.2)
-зберігається в секретах репозиторію (CITY / STREET / HOUSE), а не в коді.
+Запускається в GitHub Actions кожні ~10 хв. Адреса — будь-який будинок черги 6.2 (задається у файлі запуску).
+Ключа немає: Worker перевіряє «посвідчення» (OIDC), яке GitHub видає кожному запуску цього репозиторію.
 Логіка звернення до ДТЕК — та сама, що в перевіреному скрапері «Сяйва наших вікон».
 """
 import asyncio
@@ -21,7 +21,7 @@ CITY = os.environ["CITY"]
 STREET = os.environ["STREET"]
 HOUSE = os.environ["HOUSE"]
 WORKER_URL = os.environ["WORKER_URL"].rstrip("/")
-INGEST_TOKEN = os.environ["INGEST_TOKEN"]
+INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")
 TZ = ZoneInfo("Europe/Kyiv")
 
 
@@ -221,11 +221,23 @@ async def fetch_notice(site=SITE):
             await browser.close()
 
 
+def auth_token() -> str:
+    """Ключ (якщо заданий) або «посвідчення» GitHub Actions для аудиторії selo-bot."""
+    if INGEST_TOKEN:
+        return INGEST_TOKEN
+    url, tok = os.getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), os.getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN")
+    if not url or not tok:
+        raise RuntimeError("немає посвідчення GitHub (потрібен permissions: id-token: write)")
+    req = urllib.request.Request(url + "&audience=selo-bot", headers={"Authorization": f"Bearer {tok}"})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode())["value"]
+
+
 def post(payload: dict) -> None:
     req = urllib.request.Request(
         f"{WORKER_URL}/ingest",
         data=json.dumps(payload).encode(),
-        headers={"Authorization": f"Bearer {INGEST_TOKEN}", "Content-Type": "application/json", "User-Agent": "selo-scraper/1.0"},
+        headers={"Authorization": f"Bearer {auth_token()}", "Content-Type": "application/json", "User-Agent": "selo-scraper/1.0"},
         method="POST",
     )
     with urllib.request.urlopen(req, timeout=30) as r:
