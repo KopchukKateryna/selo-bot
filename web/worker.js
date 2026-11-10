@@ -49,6 +49,15 @@ const DENY = "<!doctype html><html lang=\"uk\"><head><meta charset=\"utf-8\"><me
   "<style>body{margin:0;font-family:system-ui,sans-serif;background:#F2F4F7;color:#101A26;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;padding:24px}\n" +
   "@media(prefers-color-scheme:dark){body{background:#0E1621;color:#F1F5FA}}h1{font-size:28px}p{font-size:20px;line-height:1.4;max-width:420px}</style></head>\n" +
   "<body><div><h1>Сяйво Наливайківки</h1><p>Відкрийте, будь ласка, посилання, яке вам надіслали сусіди чи староста.</p></div></body></html>";
+// час останньої вдалої перевірки ДТЕК пишемо в базу при кожному приході скрапера (KV пишеться рідше — лише при змінах або раз на 30 хв)
+async function markChecked(env, iso) {
+  try { const db = await sdb(env); if (db) await db.prepare("INSERT INTO meta (k, v) VALUES ('checked', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(iso).run(); } catch (e) { console.log("meta error", String(e)); }
+}
+async function lastCheck(env, s) {
+  let t = s.checked_at || null;
+  try { const db = await sdb(env); const r = db && await db.prepare("SELECT v FROM meta WHERE k = 'checked'").first(); if (r && r.v && (!t || r.v > t)) t = r.v; } catch (e) {}
+  return t;
+}
 async function readState(env) {
   return (await env.STATE.get("state", "json")) || {days: {}, hist: {}, notice: null, outage: null};
 }
@@ -121,6 +130,7 @@ async function ingest(req, env) {
     next.err = String(body.error || "помилка скрапера").slice(0, 300);
     next.errAt = now.toISOString();
   }
+  if (body.ok && next.checked_at) await markChecked(env, next.checked_at);
   const sig = o => JSON.stringify([o.days, o.outage, o.notice, o.group, o.hist, o.err, o.g || null]);
   const changed = sig(prev) !== sig(next);
   const stale = !prev.writtenAt || now - new Date(prev.writtenAt) > KEEP_MS;
@@ -142,7 +152,7 @@ async function apiState(env, g) {
   for (const [k, v] of Object.entries(src.days || {})) if (k >= today) days[k] = v;
   const dk = await darkCount(env);
   return {ok: true, group, days, notice: s.notice || null, outage: s.outage || null,
-    hist: src.hist || {}, checked_at: s.checked_at || null, updated_at: s.updated_at || null, err: s.err || null, dark: dk.n, back: dk.b};
+    hist: src.hist || {}, checked_at: await lastCheck(env, s), updated_at: s.updated_at || null, err: s.err || null, dark: dk.n, back: dk.b};
 }
 // «У мене світла немає» / «світло з'явилось»: один запис на браузер (анонімний номер).
 // st = 1 — світла немає (діє 2 години), st = 0 — світло з'явилось (рахуємо за останню годину)
@@ -174,7 +184,8 @@ async function watch(env, fetcher = fetch) {
   if (!env.ALERT_BOT_TOKEN || !env.ALERT_CHAT_ID) return "off";
   const s = await readState(env);
   const w = (await env.STATE.get("watch", "json")) || {};
-  const age = s.checked_at ? Date.now() - Date.parse(s.checked_at) : Infinity;
+  const chk = await lastCheck(env, s);
+  const age = chk ? Date.now() - Date.parse(chk) : Infinity;
   const down = age > WATCH_MS;
   if (down === !!w.down) return "same";
   const text = down
@@ -211,6 +222,7 @@ async function sdb(env) {
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS hits (ts INTEGER, day TEXT, hour INTEGER, uid TEXT, ev TEXT, sa INTEGER, dev TEXT, fs INTEGER)").run();
     await env.DB.prepare("CREATE INDEX IF NOT EXISTS hits_day ON hits(day)").run();
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS dark (uid TEXT PRIMARY KEY, ts INTEGER, st INTEGER)").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT)").run();
     DBREADY = true;
   }
   return env.DB;
@@ -256,7 +268,7 @@ async function apiStats(env) {
   const dm = {}; days.forEach(r => dm[r.day] = r);
   const series = []; for (let i = 13; i >= 0; i--) { const d = addDay(today, -i); series.push({day: d, opens: (dm[d] || {}).opens || 0, users: (dm[d] || {}).users || 0, fresh: nf[d] || 0}); }
   return {ok: true, today, total: {users: tot.users || 0, opens: tot.opens || 0}, series, sa, dev, tour: tour.users || 0, bigFont: big.users || 0, hours, share: share.users || 0, dark: (await darkCount(env)).n,
-    scraper: {checked_at: st.checked_at || null, err: st.err || null, errAt: st.errAt || null}};
+    scraper: {checked_at: await lastCheck(env, st), err: st.err || null, errAt: st.errAt || null}};
 }
 const STATS_PAGE = "<!doctype html><html lang=\"uk\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>Статистика · Сяйво Наливайківки</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\"><link href=\"https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap\" rel=\"stylesheet\"><style>" +
   ":root{--bg:#F2F4F7;--surface:#fff;--ink:#14202E;--muted:#66758A;--line:#E3E8EE;--accent:#3566D6;--on:#1F8A70;--warm:#E39A1C}@media(prefers-color-scheme:dark){:root{--bg:#0E1621;--surface:#152233;--ink:#E6ECF3;--muted:#8FA0B5;--line:#22324A;--accent:#6E9BFF;--on:#35B88F;--warm:#F0B44A}}" +
@@ -326,7 +338,7 @@ export default {
         if (p === "/api/stats") return json(await apiStats(env), 200, hd);
         return new Response(STATS_PAGE, {headers: {...hd, "content-type": "text/html; charset=utf-8"}});
       }
-      if (p === "/health") { const s = await readState(env); return json({ok: true, checked_at: s.checked_at || null, updated_at: s.updated_at || null, err: s.err || null, days: Object.keys(s.days || {})}); }
+      if (p === "/health") { const s = await readState(env); return json({ok: true, checked_at: await lastCheck(env, s), updated_at: s.updated_at || null, err: s.err || null, days: Object.keys(s.days || {})}); }
       const IMG = {"/icon-180.png": "icon-180.png", "/apple-touch-icon.png": "icon-180.png", "/apple-touch-icon-precomposed.png": "icon-180.png",
         "/icon-192.png": "icon-192.png", "/icon-512.png": "icon-512.png", "/favicon.ico": "icon-192.png"};
       if (IMG[p]) return new Response(await asset(env, IMG[p]), {headers: {"content-type": "image/png", "cache-control": "public, max-age=604800"}});
