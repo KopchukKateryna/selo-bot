@@ -22,6 +22,8 @@ STREET = os.environ["STREET"]
 HOUSE = os.environ["HOUSE"]
 WORKER_URL = os.environ["WORKER_URL"].rstrip("/")
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")
+# інші черги села (напр. "5.1,5.2,1.1"): ДТЕК віддає графіки всіх черг тим самим запитом
+EXTRA_GROUPS = [g.strip() for g in os.getenv("EXTRA_GROUPS", "").split(",") if g.strip()]
 TZ = ZoneInfo("Europe/Kyiv")
 
 
@@ -53,10 +55,21 @@ async def _fetch_with(client, city=CITY, street=STREET, house=HOUSE):
         resp = await c.get_home_num(city, street)
     entry = resp.houses.get(house)
     today = tomorrow = None
+    extra = {}
     if entry is not None and entry.primary_group and resp.fact is not None:
         today = resp.fact.get_group_today(entry.primary_group)
         tomorrow = resp.fact.get_group_day(resp.fact.today_ts + 86400, entry.primary_group)
-    return today, tomorrow, entry
+        # назва черги в ДТЕК — з префіксом (напр. "GPV6.2"): беремо той самий префікс для інших черг
+        m = re.match(r"^(.*?)(\d+\.\d+)$", str(entry.primary_group))
+        prefix = m.group(1) if m else ""
+        for g in EXTRA_GROUPS:
+            try:
+                t = resp.fact.get_group_today(prefix + g)
+                if t:
+                    extra[g] = (t, resp.fact.get_group_day(resp.fact.today_ts + 86400, prefix + g))
+            except Exception as e:  # noqa: BLE001  (інші черги — бонус, основна важливіша)
+                print(f"Черга {g}: не вдалося взяти графік:", type(e).__name__, e, file=sys.stderr)
+    return today, tomorrow, entry, extra
 
 
 async def fetch_raw(site=SITE, city=CITY, street=STREET, house=HOUSE):
@@ -246,7 +259,7 @@ def post(payload: dict) -> None:
 
 async def main() -> None:
     try:
-        today_slots, tomorrow_slots, entry = await fetch_raw()
+        today_slots, tomorrow_slots, entry, extra = await fetch_raw()
         if not today_slots:
             raise DtekClientError("Графік для цієї адреси не знайдено (перевірте CITY/STREET/HOUSE)")
         today = datetime.now(TZ).date()
@@ -260,7 +273,19 @@ async def main() -> None:
             print("Не вдалося розібрати поточне відключення:", type(e).__name__, e, file=sys.stderr)
         group = getattr(entry, "primary_group", None) or ""
         payload = {"ok": True, "days": days, "outage": outage, "group": str(group)}
-        print("Графік отримано, днів:", len(days), "| черга:", group, "| відключення:", json.dumps(outage, ensure_ascii=False))
+        groups = {}
+        for g, (t_slots, tm_slots) in extra.items():
+            try:
+                gd = {today.isoformat(): to_intervals(t_slots)}
+                if tm_slots:
+                    gd[(today + timedelta(days=1)).isoformat()] = to_intervals(tm_slots)
+                groups[g] = gd
+            except Exception as e:  # noqa: BLE001
+                print(f"Черга {g}: не вдалося розібрати графік:", type(e).__name__, e, file=sys.stderr)
+        if EXTRA_GROUPS:
+            payload["groups"] = groups
+        print("Графік отримано, днів:", len(days), "| черга:", group, "| інші черги:", ", ".join(sorted(groups)) or "немає",
+              "| відключення:", json.dumps(outage, ensure_ascii=False))
     except Exception as e:  # noqa: BLE001
         payload = {"ok": False, "error": f"{type(e).__name__}: {e}"[:300]}
         print("Помилка:", payload["error"], file=sys.stderr)

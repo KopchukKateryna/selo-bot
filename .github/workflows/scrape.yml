@@ -1,7 +1,7 @@
 name: scrape-selo
 
 # GitHub запускає розклад для нових репозиторіїв із запізненням і нерегулярно.
-# Тому один запуск працює ~5 год 50 хв і сам бере графік кожні 10 хв,
+# Тому один запуск працює ~5 год 50 хв і сам бере графік кожні 5 хв,
 # а наприкінці запускає себе знову. Розклад лишається як запасний (якщо ланцюжок обірветься).
 on:
   schedule:
@@ -36,14 +36,14 @@ jobs:
 
       - run: sudo apt-get install -y xvfb
 
-      - name: Scrape DTEK every 10 min for ~5h50m
+      - name: Scrape DTEK every 5 min for ~5h50m
         run: |
           end=$(( $(date +%s) + 350*60 ))
           while [ "$(date +%s)" -lt "$end" ]; do
             start=$(date +%s)
             echo "=== $(TZ=Europe/Kyiv date '+%d.%m %H:%M') ==="
-            timeout 480 xvfb-run -a python scraper/scrape.py || echo "запуск не вдався — спробую через 10 хв"
-            left=$(( 600 - ($(date +%s) - start) ))
+            timeout 480 xvfb-run -a python scraper/scrape.py || echo "запуск не вдався — спробую через 5 хв"
+            left=$(( 300 - ($(date +%s) - start) ))
             [ "$left" -gt 0 ] && [ $(( $(date +%s) + left )) -lt "$end" ] && sleep "$left" || true
           done
         env:
@@ -52,6 +52,7 @@ jobs:
           CITY: с. Наливайківка
           STREET: вул. Центральна
           HOUSE: "1"
+          EXTRA_GROUPS: "5.1,5.2,1.1"
 
       - name: Start the next run
         if: always() && github.event_name != 'schedule'

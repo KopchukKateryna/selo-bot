@@ -272,32 +272,91 @@ button{font:inherit;cursor:pointer;color:inherit}
 .msg{text-align:center;color:var(--muted);padding:18px 6px;font-size:calc(18px*var(--fs))}
 .legend .mb[hidden]{display:none}
 .welcome[hidden]{display:none !important}
-@media (min-width:1100px){ .alert{position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:14px;max-width:820px;margin:0;box-shadow:0 8px 24px rgba(0,0,0,.25)} }
+.alerts{display:contents}
+@media (min-width:1100px){
+  .alerts{display:flex;gap:8px;position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:14px;width:max-content}
+  .alerts .alert{margin:0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+}
+.alert.wxw{background:color-mix(in srgb,#2F7BE0 14%,var(--surface));border-color:color-mix(in srgb,#2F7BE0 45%,transparent)}
+/* черга */
+.grpb{border:2px solid var(--line);background:var(--surface);border-radius:999px;min-height:40px;padding:4px 14px;font-weight:600;color:var(--muted);font-size:inherit;margin-right:6px}
+.grpb b{color:var(--ink)}
+.grpb i{font-style:normal;color:var(--accent);font-weight:700;margin-left:4px}
+.pick.grp button{flex-direction:column;gap:2px;padding:14px 8px;font-size:calc(28px*var(--fs))}
+.pick.grp small{font-weight:600;color:var(--muted);font-size:calc(15px*var(--fs))}
+/* «у мене світла немає» */
+.dark{margin-top:14px}
+.dark:empty{display:none}
+.dark .btn{width:100%;display:block}
+.dark .btn.no{background:color-mix(in srgb,var(--off) 12%,var(--surface));border:2px solid color-mix(in srgb,var(--off) 55%,transparent);color:var(--off)}
+.dark small{display:block;color:var(--muted);font-size:calc(16px*var(--fs));margin-top:8px;line-height:1.3}
+.dark .me{font-weight:700;font-size:calc(19px*var(--fs));margin:0 0 10px;color:var(--off)}
+.dark .cnt{font-weight:700;color:var(--ink)}
+.dark .cnt.bk{color:var(--on)}
+.dark .btn.yes{background:color-mix(in srgb,var(--on) 12%,var(--surface));border:2px solid color-mix(in srgb,var(--on) 55%,transparent);color:var(--on)}
+.dark .me.ok{color:var(--on)}
+.dkb{display:grid;gap:8px}
+.dkb:empty{display:none}
+/* штриховка «немає» */
+.legend i.hx{background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.42) 0 2px,transparent 2px 6px)}
+/* дзвінки */
+.calls{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.calls a{grid-column:span 2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;text-decoration:none;min-height:86px;padding:10px 4px;border-radius:18px;
+  background:color-mix(in srgb,var(--c) 12%,var(--surface));border:2px solid color-mix(in srgb,var(--c) 45%,transparent);color:var(--ink)}
+.calls a b{font-size:calc(30px*var(--fs));font-weight:800;color:var(--c);line-height:1.1;font-variant-numeric:tabular-nums}
+.calls a span{font-size:calc(16px*var(--fs));font-weight:600;color:var(--muted);line-height:1.2;margin-top:3px}
+.calls a.wide{grid-column:1/-1;flex-direction:row;gap:14px;min-height:76px}
+.calls a.wide span{text-align:left;margin:0}
+.calls a.wide span em{display:block;font-style:normal;color:var(--ink);font-weight:800;font-size:calc(21px*var(--fs));font-variant-numeric:tabular-nums}
+.calls a.half{grid-column:span 3}
+.calls svg{width:38px;height:38px;color:var(--c);flex:none}
+.tool.desk{display:none}
+/* надіслати графік */
+.shimg{display:block;width:100%;max-width:420px;margin:0 auto 14px;border-radius:16px;border:2px solid var(--line)}
+a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none;color:inherit}
+.sh .seg{margin-bottom:14px}
+@media (min-width:1100px){
+  #calls{display:none}
+  .tool.desk{display:flex}
+  .sheet{align-items:center;justify-content:center}
+  .sh{max-width:560px;border-radius:26px}
+  .dark{margin-top:10px}
+  .dark .btn{min-height:48px;font-size:calc(17px*var(--fs))}
+  .dkb{grid-template-columns:1fr 1fr}
+  .dkb .btn:only-child{grid-column:1/-1}
+  .dkb .btn:not(:only-child){padding:4px 6px;font-size:calc(15px*var(--fs));line-height:1.15}
+  .alerts{flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:96vw}
+  .dark small{font-size:calc(14px*var(--fs));margin-top:6px}
+  .grpb{min-height:32px;padding:2px 12px}
+}
+@media (min-width:1100px) and (max-width:1599px){ .tool .lg{display:none} .tool .sm{display:inline;white-space:nowrap} }
+@media (min-width:1100px) and (max-height:760px){ .dark small{display:none} .dark .me{margin-bottom:6px;font-size:calc(16px*var(--fs))} .dark .btn{min-height:42px} }
 </style>
 </head>
 <body>
 <div class="wrap" id="app">
   <header class="top">
     <h1>Сяйво Наливайківки</h1>
-    <p>Черга <b id="grp">6.2</b> · <span id="upd">завантаження…</span></p>
+    <p><button class="grpb" id="grpbtn" type="button" aria-label="Змінити чергу">Черга <b id="grp">6.2</b><i>змінити</i></button><span id="upd">завантаження…</span></p>
   </header>
 
-  <p class="alert" id="alert" hidden></p>
+  <div class="alerts" id="alerts"><p class="alert" id="alert" hidden></p><p class="alert wxw" id="wxwarn" hidden></p></div>
 
 
   <section class="now" id="now" style="--c:var(--muted)">
     <div class="st">
       <div class="ic" id="nowic"></div>
-      <div><div class="t1">Зараз</div><div class="t2" id="nowt">…</div></div>
+      <div><div class="t1">За графіком зараз</div><div class="t2" id="nowt">…</div></div>
     </div>
     <div class="next" id="nownext">&nbsp;</div>
+    <div class="dark" id="dark"></div>
   </section>
 
   <section class="card" id="sched">
     <h2>Графік на добу</h2>
     <div class="seg" id="seg"><button class="on" data-d="0">Сьогодні</button><button data-d="1">Завтра</button></div>
     <div id="daybox"><svg class="dial" id="dial" viewBox="0 0 440 440" role="img" aria-label="Графік відключень на добу"></svg>
-    <div class="legend"><span><i style="background:var(--on)"></i>світло є</span><span><i style="background:var(--off)"></i>немає</span><span class="mb" id="lgmb" hidden><i style="background:var(--maybe)"></i>можливо</span></div>
+    <div class="legend"><span><i style="background:var(--on)"></i>світло є</span><span><i class="hx" style="background-color:var(--off)"></i>немає</span><span class="mb" id="lgmb" hidden><i style="background:var(--maybe)"></i>можливо</span></div>
     <div class="sun" id="sun"></div></div>
     <ul class="list" id="list"></ul>
   </section>
@@ -319,12 +378,26 @@ button{font:inherit;cursor:pointer;color:inherit}
     <div class="week" id="week"></div>
   </section>
 
+  <section class="card" id="calls">
+    <h2>Подзвонити</h2>
+    <div class="calls" id="callbox">
+      <a class="wide" href="tel:0800400740" style="--c:var(--accent)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>ДТЕК — немає світла<em>0 800 400 740</em>безкоштовно</span></a>
+      <a href="tel:101" style="--c:var(--off)"><b>101</b><span>Пожежна</span></a>
+      <a href="tel:102" style="--c:var(--accent)"><b>102</b><span>Поліція</span></a>
+      <a href="tel:103" style="--c:var(--off)"><b>103</b><span>Швидка</span></a>
+      <a class="half" href="tel:104" style="--c:var(--maybe)"><b>104</b><span>Аварійна газу</span></a>
+      <a class="half" href="tel:112" style="--c:var(--off)"><b>112</b><span>Екстрена допомога</span></a>
+    </div>
+  </section>
+
   <section class="tools" id="tools">
+    <button class="tool" id="sharebtn"><span class="ti">📤</span><span><em class="lg">Надіслати графік</em><em class="sm">Надіслати</em><small>Картинкою у Viber чи Telegram</small></span></button>
+    <button class="tool desk" id="callbtn"><span class="ti">📞</span><span><em class="lg">Телефони</em><em class="sm">Телефони</em></span></button>
     <button class="tool" id="addbtn"><span class="ti">📲</span><span><em class="lg">Додати на екран телефона</em><em class="sm">На екран</em><small>Щоб відкривати одним дотиком</small></span></button>
     <button class="tool" id="tourbtn"><span class="ti">?</span><span><em class="lg">Як користуватися</em><em class="sm">Підказки</em><small>Покажу ще раз, крок за кроком</small></span></button>
     <button class="tool" id="bigbtn"><span class="ti">Аа</span><span><em class="lg">Розмір шрифту</em><em class="sm">Шрифт</em><small>Зробити текст більшим чи меншим</small></span></button>
   </section>
-  <p class="foot" id="foot">Графік — із сайту ДТЕК, оновлюється кожні 10 хв. Погода — модель Open-Meteo.<br>Під час екстрених відключень графік може не діяти.</p>
+  <p class="foot" id="foot">Графік — із сайту ДТЕК, перевіряється кожні 5 хв. Сяйво показує графік, а не те, чи є світло саме у вас.<br>Погода — модель Open-Meteo. Під час екстрених відключень графік може не діяти.</p>
 </div>
 
 <div id="overlay"></div>
@@ -333,11 +406,14 @@ button{font:inherit;cursor:pointer;color:inherit}
 "use strict";
 var LAT = 50.476, LON = 29.70;
 var ST = null, WX = null, DAY = 0, NOWM = 0, TODAY = "", TOMORROW = "";
+var GROUPS = ["6.2", "5.1", "5.2", "1.1"], GRP = "6.2", OFFLINE = false, CACHEAT = 0, DARKN = 0, BACKN = 0, CUR = null, DARKERR = false;
 var LS = {get: function(k){ try { return localStorage.getItem(k); } catch (e) { return null; } },
           set: function(k, v){ try { localStorage.setItem(k, v); } catch (e) {} }};
 var KQ = new URLSearchParams(location.search).get("k");
 function q(p){ return p + (KQ ? (p.indexOf("?") < 0 ? "?" : "&") + "k=" + encodeURIComponent(KQ) : ""); }
 function $(id){ return document.getElementById(id); }
+(function(){ var g = LS.get("selo:grp"); if (GROUPS.indexOf(g) >= 0) GRP = g; })();
+function cached(k, maxAge){ try { var o = JSON.parse(LS.get(k) || "null"); if (o && o.d && (!maxAge || Date.now() - o.at < maxAge)) return o; } catch (e) {} return null; }
 
 /* ---------- час у Києві ---------- */
 function kyiv(d){
@@ -388,14 +464,19 @@ function skyNight(){ return matchMedia("(prefers-color-scheme: dark)").matches ?
 function drawDial(){
   var key = DAY ? TOMORROW : TODAY, iv = intervals(key), S = segs(iv), SUN = sunTimes(key), isToday = !DAY;
   var cx = 220, cy = 220, R = 124, W = 32, SR = R - W / 2 - 26, SW = 20, h = "";
+  // розмір підписів на колі — разом із розміром шрифту сторінки; при великих — підписано кожну другу годину
+  var K = [1, 1.12, 1.26, 1.42, 1.58][FSI] || 1, KS = Math.min(K, 1.3), PADV = [0, 6, 12, 18, 22][FSI] || 0, PADY = Math.round(PADV / 2), EVEN = FSI >= 2;
+  $("dial").setAttribute("viewBox", (-PADV) + " " + (-PADY) + " " + (440 + 2 * PADV) + " " + (440 + 2 * PADY));
+  h += '<defs><pattern id="hx" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="#fff" fill-opacity=".34"/></pattern></defs>';
   if (!iv){
     h += '<circle cx="' + cx + '" cy="' + cy + '" r="' + R + '" stroke="var(--line)" stroke-width="' + W + '" fill="none"/>';
   } else S.forEach(function(s){
     h += '<path d="' + arc(cx, cy, R, s[0] + 2, s[1] - 2) + '" stroke="var(--' + s[2] + ')" stroke-width="' + W + '" fill="none"/>';
+    if (s[2] === "off") h += '<path d="' + arc(cx, cy, R, s[0] + 2, s[1] - 2) + '" stroke="url(#hx)" stroke-width="' + W + '" fill="none"/>';
     if (s[2] === "on" && s[1] - s[0] >= 90){
       var mid = (s[0] + s[1]) / 2, low = mid > 360 && mid < 1080, id = "lp" + DAY + "_" + s[0], p1 = pt(cx, cy, R, s[0]), p2 = pt(cx, cy, R, s[1]), lg = (s[1] - s[0]) > 720 ? 1 : 0;
       var d = low ? "M" + p2[0] + " " + p2[1] + " A" + R + " " + R + " 0 " + lg + " 0 " + p1[0] + " " + p1[1] : "M" + p1[0] + " " + p1[1] + " A" + R + " " + R + " 0 " + lg + " 1 " + p2[0] + " " + p2[1];
-      h += '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="' + (s[1] - s[0] >= 150 ? 17 : 14) + '" font-weight="800" fill="#fff" dominant-baseline="central"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + hrs(Math.round((s[1] - s[0]) / 6) / 10) + '</textPath></text>';
+      h += '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="' + ((s[1] - s[0] >= 150 ? 17 : 14) * KS).toFixed(1) + '" font-weight="800" fill="#fff" dominant-baseline="central"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + hrs(Math.round((s[1] - s[0]) / 6) / 10) + '</textPath></text>';
     }
   });
   // небо: жовта смуга — поки світить сонце, синя — ніч; підписи прямо на смузі
@@ -404,8 +485,8 @@ function drawDial(){
   var d1 = pt(cx, cy, SR, SUN[1] - 30), d2 = pt(cx, cy, SR, SUN[0] + 30), n1 = pt(cx, cy, SR, SUN[1] + 30), n2 = pt(cx, cy, SR, SUN[0] + 1440 - 30);
   h += '<path id="skyday" d="M' + d1[0] + ' ' + d1[1] + ' A' + SR + ' ' + SR + ' 0 0 0 ' + d2[0] + ' ' + d2[1] + '" fill="none"/>' +
        '<path id="skynight" d="M' + n1[0] + ' ' + n1[1] + ' A' + SR + ' ' + SR + ' 0 1 1 ' + n2[0] + ' ' + n2[1] + '" fill="none"/>' +
-       '<text font-size="12.5" font-weight="800" fill="#5a3b00" dominant-baseline="central" letter-spacing=".3"><textPath href="#skyday" startOffset="50%" text-anchor="middle">день</textPath></text>' +
-       '<text font-size="12.5" font-weight="800" fill="#e6ecff" dominant-baseline="central" letter-spacing=".3"><textPath href="#skynight" startOffset="50%" text-anchor="middle">ніч</textPath></text>';
+       '<text font-size="' + (12.5 * KS).toFixed(1) + '" font-weight="800" fill="#5a3b00" dominant-baseline="central" letter-spacing=".3"><textPath href="#skyday" startOffset="50%" text-anchor="middle">день</textPath></text>' +
+       '<text font-size="' + (12.5 * KS).toFixed(1) + '" font-weight="800" fill="#e6ecff" dominant-baseline="central" letter-spacing=".3"><textPath href="#skynight" startOffset="50%" text-anchor="middle">ніч</textPath></text>';
   [[SUN[0], "☀"], [SUN[1], "☾"]].forEach(function(z){ var c = pt(cx, cy, SR, z[0]);
     h += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="13" fill="var(--surface)" stroke="' + (z[1] === "☀" ? "#F0A400" : skyNight()) + '" stroke-width="3"/>' +
          '<text x="' + c[0] + '" y="' + (c[1] + 6) + '" text-anchor="middle" font-size="16" fill="' + (z[1] === "☀" ? "#E8902E" : "var(--ink)") + '">' + z[1] + '</text>'; });
@@ -413,9 +494,9 @@ function drawDial(){
   for (var k = 0; k < 48; k++){
     var mn = k * 30, hr = k % 2 === 0, big = hr && (k / 2) % 6 === 0, o = R + W / 2 + 3, a1 = pt(cx, cy, o, mn), b1 = pt(cx, cy, o + (big ? 13 : hr ? 9 : 5), mn);
     h += '<line x1="' + a1[0] + '" y1="' + a1[1] + '" x2="' + b1[0] + '" y2="' + b1[1] + '" stroke="var(--muted)" stroke-width="' + (big ? 3 : hr ? 2 : 1.2) + '" stroke-linecap="round"/>';
-    if (hr){ var H = k / 2, t = pt(cx, cy, R + W / 2 + (big ? 20 : 15), mn), ang = (mn / 1440) * 2 * Math.PI, sx = Math.sin(ang), cy2 = -Math.cos(ang),
-      anc = sx > 0.2 ? "start" : sx < -0.2 ? "end" : "middle", dy = (big ? 7 : 4.5) + (anc === "middle" ? (cy2 < 0 ? -6 : 10) : 0);
-      h += '<text x="' + t[0] + '" y="' + (t[1] + dy) + '" text-anchor="' + anc + '" font-size="' + (big ? 19 : 12.5) + '" font-weight="' + (big ? 800 : 600) + '" fill="' + (big ? "var(--ink)" : "var(--muted)") + '">' + String(H).padStart(2, "0") + ':00</text>'; }
+    if (hr && !(EVEN && (k / 2) % 2)){ var H = k / 2, fsz = big ? 19 * KS : (EVEN ? 14 : 12.5) * K, t = pt(cx, cy, R + W / 2 + (big ? 20 : 15), mn), ang = (mn / 1440) * 2 * Math.PI, sx = Math.sin(ang), cy2 = -Math.cos(ang),
+      anc = sx > 0.2 ? "start" : sx < -0.2 ? "end" : "middle", dy = fsz * 0.36 + (anc === "middle" ? (cy2 < 0 ? -6 : 10 + (fsz - 12.5) * 0.3) : 0);
+      h += '<text x="' + t[0] + '" y="' + (t[1] + dy) + '" text-anchor="' + anc + '" font-size="' + fsz.toFixed(1) + '" font-weight="' + (big ? 800 : 600) + '" fill="' + (big ? "var(--ink)" : "var(--muted)") + '">' + String(H).padStart(2, "0") + ':00</text>'; }
   }
   if (isToday){
     var dimArc = function(a, b, op){ h += '<path d="' + arc(cx, cy, R, a, b) + '" stroke="var(--surface)" stroke-opacity="' + op + '" stroke-width="' + (W + 1) + '" fill="none"/>' ; };
@@ -423,10 +504,10 @@ function drawDial(){
     for (var q2 = 0; q2 < 6; q2++) if (ramp > 0) dimArc(NOWM - ramp + q2 * ramp / 6, NOWM - ramp + (q2 + 1) * ramp / 6, (0.62 * (6 - q2) / 6.5).toFixed(2));
     var e = pt(cx, cy, R + W / 2 - 2, NOWM);
     h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + e[0] + '" y2="' + e[1] + '" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/><circle cx="' + cx + '" cy="' + cy + '" r="9" fill="var(--ink)"/>' +
-         '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="28" font-weight="800" fill="var(--ink)">' + hm(NOWM) + '</text>' +
-         '<text x="' + cx + '" y="' + (cy - 28) + '" text-anchor="middle" font-size="16" font-weight="700" fill="var(--muted)">зараз</text>';
+         '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="' + (28 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="800" fill="var(--ink)">' + hm(NOWM) + '</text>' +
+         '<text x="' + cx + '" y="' + (cy - 28) + '" text-anchor="middle" font-size="' + (16 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="700" fill="var(--muted)">зараз</text>';
   } else {
-    h += '<text x="' + cx + '" y="' + (cy + 9) + '" text-anchor="middle" font-size="26" font-weight="800" fill="var(--ink)">завтра</text>';
+    h += '<text x="' + cx + '" y="' + (cy + 9) + '" text-anchor="middle" font-size="' + (26 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="800" fill="var(--ink)">завтра</text>';
   }
   if (!iv) h += '<text x="' + cx + '" y="' + (cy + (isToday ? 64 : 40)) + '" text-anchor="middle" font-size="14" font-weight="700" fill="var(--muted)">графіка ще немає</text>';
   $("dial").innerHTML = h;
@@ -436,11 +517,11 @@ function drawDial(){
   if (!iv){
     $("list").innerHTML = '<li class="msg" style="display:block;border:0">' + (DAY ? "ДТЕК ще не оприлюднив графік на завтра. Зазвичай він з’являється ввечері." : "Графіка на сьогодні поки немає.") + '</li>';
   } else if (!iv.length){
-    $("list").innerHTML = '<li class="msg" style="display:block;border:0">☀ За графіком відключень ' + (DAY ? "завтра" : "сьогодні") + ' немає.</li>';
+    $("list").innerHTML = '<li class="msg" style="display:block;border:0">💡 За графіком відключень ' + (DAY ? "завтра" : "сьогодні") + ' немає.</li>';
   } else {
     $("list").innerHTML = S.map(function(s){
       var cur = isToday && NOWM >= s[0] && NOWM < s[1], on = s[2] === "on", past = isToday && s[1] <= NOWM;
-      return '<li class="' + (cur ? "cur" : past ? "past" : "") + '" style="--c:var(--' + s[2] + ')"><span class="m">' + (on ? "☀" : s[2] === "maybe" ? "?" : "✕") + '</span><span class="tm">' + hm(s[0]) + ' – ' + hm(s[1]) + '</span><span class="lb">' +
+      return '<li class="' + (cur ? "cur" : past ? "past" : "") + '" style="--c:var(--' + s[2] + ')"><span class="m">' + (on ? "💡" : s[2] === "maybe" ? "?" : "✕") + '</span><span class="tm">' + hm(s[0]) + ' – ' + hm(s[1]) + '</span><span class="lb">' +
         (cur ? '<span class="now-b">зараз</span>' : (on ? "світло" : s[2] === "maybe" ? "можливо" : "немає")) + '</span></li>';
     }).join("");
   }
@@ -461,12 +542,40 @@ function nextChange(){
   }
   return {state: state, end: end, day: day};
 }
+function plN(n){ var a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " сусід повідомив" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " сусіди повідомили" : " сусідів повідомили"); }
+function myDark(){ var t = +(LS.get("selo:dark") || 0); return !!t && Date.now() - t < 2 * 3600e3; }
+function myBack(){ var t = +(LS.get("selo:back") || 0); return !!t && Date.now() - t < 3600e3; }
+function darkLine(){ var n = DARKN || 0, b = BACKN || 0;
+  return (n > 0 ? '<span class="cnt">Без світла: ' + plN(n) + '</span> (за останні 2 години).' : "") + (b > 0 ? (n > 0 ? " " : "") + '<span class="cnt bk">Світло вже з’явилось у ' + b + '</span>' + (n > 0 ? "." : " (за останню годину).") : ""); }
+function drawDark(){
+  var el = $("dark"), n = DARKN || 0, b = BACKN || 0, h = "", ln = darkLine();
+  if (!ST || OFFLINE){ el.innerHTML = DARKERR ? '<small>Не вдалося надіслати — немає зв’язку.</small>' : ""; return; }
+  if (myDark()) h = '<p class="me">✓ Ви повідомили сусідам, що світла немає</p><button type="button" class="btn yes" data-dark="0">Світло з’явилось</button>' +
+    '<small>' + (n > 1 || b > 0 ? ln : 'Коли світло дадуть — натисніть кнопку. Інакше позначка зникне сама через 2 години.') + '</small>';
+  else if (CUR !== "off" || n > 0){
+    if (myBack()) h = '<p class="me ok">✓ Ви повідомили, що світло з’явилось</p>';
+    h += '<div class="dkb">' + (CUR !== "off" ? '<button type="button" class="btn no" data-dark="1">У мене світла немає</button>' : "") +
+      (n > 0 && !myBack() ? '<button type="button" class="btn yes" data-dark="0">У мене світло є</button>' : "") + '</div>';
+    h += '<small>' + (ln || 'Натисніть, якщо світло зникло не за графіком, — сусіди це побачать.') + '</small>';
+  } else if (b > 0) h = '<small>' + ln + '</small>';
+  if (DARKERR) h += '<small>Не вдалося надіслати — немає зв’язку. Спробуйте ще раз.</small>';
+  el.innerHTML = h;
+}
+function sendDark(on){
+  DARKERR = false;
+  fetch(q("/api/dark"), {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({uid: UID, on: on ? 1 : 0})})
+    .then(function(r){ return r.json(); }).then(function(j){ if (!j || !j.ok) throw 0; DARKN = j.n || 0; BACKN = j.b || 0; LS.set("selo:dark", on ? String(Date.now()) : "0"); LS.set("selo:back", on ? "0" : String(Date.now())); drawDark(); drawTop(); })
+    .catch(function(){ DARKERR = true; drawDark(); });
+}
+$("dark").addEventListener("click", function(e){ var b = e.target.closest("[data-dark]"); if (b){ b.disabled = true; sendDark(b.getAttribute("data-dark") === "1"); } });
 function drawNow(){
   var iv = intervals(TODAY);
-  if (!ST){ return; }
-  if (!iv){ $("now").style.setProperty("--c", "var(--muted)"); $("nowic").innerHTML = IC_ON; $("nowt").textContent = "Графіка немає";
+  CUR = null;
+  if (!ST){ drawDark(); return; }
+  if (!iv){ drawDark(); $("now").style.setProperty("--c", "var(--muted)"); $("nowic").innerHTML = IC_ON; $("nowt").textContent = "Графіка немає";
     $("nownext").innerHTML = '<small>ДТЕК поки не оприлюднив графік на сьогодні</small>'; return; }
-  var n = nextChange(); if (!n) return;
+  var n = nextChange(); if (!n){ drawDark(); return; }
+  CUR = n.state; drawDark();
   var off = n.state !== "on", txt = off ? (n.state === "maybe" ? "Можливе відключення" : "Світла немає") : "Світло є";
   $("now").style.setProperty("--c", off ? (n.state === "maybe" ? "var(--maybe)" : "var(--off)") : "var(--on)");
   $("nowic").innerHTML = off ? IC_OFF : IC_ON; $("nowt").textContent = txt;
@@ -490,16 +599,19 @@ function drawStats(){
 }
 function drawTop(){
   if (!ST) return;
-  $("grp").textContent = ST.group || "6.2";
+  $("grp").textContent = GRP;
   var at = ST.checked_at ? new Date(ST.checked_at) : null, ago = at ? Math.round((Date.now() - at) / 60000) : null;
-  $("upd").textContent = ago == null ? "дані ще не надходили" : ago < 1 ? "оновлено щойно" : "оновлено " + (ago < 60 ? ago + " хв" : Math.floor(ago / 60) + " год") + " тому";
+  $("upd").textContent = OFFLINE ? "немає зв’язку" : ago == null ? "дані ще не надходили" : ago < 1 ? "оновлено щойно" : "оновлено " + (ago < 60 ? ago + " хв" : Math.floor(ago / 60) + " год") + " тому";
   var al = [];
+  if (OFFLINE){ var ck = kyiv(new Date(CACHEAT)), cp = ck.date.split("-");
+    al.push("📵 Немає інтернету. Показую графік, збережений " + (ck.date === TODAY ? "сьогодні" : cp[2] + "." + cp[1]) + " о " + hm(ck.min) + ". Він міг змінитися."); }
+  if (!OFFLINE && DARKN >= 3 && CUR === "on") al.push("⚠️ " + plN(DARKN) + ", що світла немає, хоча за графіком воно має бути." + (BACKN > 0 ? " У " + BACKN + " світло вже з’явилось." : ""));
   if (ST.notice && ST.notice.active) al.push("⚠️ ДТЕК повідомляє про " + (ST.notice.noSchedule ? "екстрені відключення — графіки зараз не діють." : "екстрені або аварійні відключення. Графік може не діяти."));
   if (ST.outage && ST.outage.kind === "emergency") al.push("⚠️ ДТЕК: аварійне відключення в частині села" + (ST.outage.end ? ", орієнтовно до " + new Date(ST.outage.end).toLocaleTimeString("uk-UA", {timeZone: "Europe/Kyiv", hour: "2-digit", minute: "2-digit"}) : "") + ".");
-  if (ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
+  if (!OFFLINE && ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
   $("alert").innerHTML = al.join("<br>"); $("alert").hidden = !al.length;
 }
-function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawTop(); drawNow(); drawDial(); drawStats(); }
+function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawNow(); drawTop(); drawDial(); drawStats(); }
 
 /* ---------- погода ---------- */
 var IC = {
@@ -524,7 +636,23 @@ function wxKind(c, day){
   return ["cloud", "Хмарно"];
 }
 function sg(t){ t = Math.round(t); return (t > 0 ? "+" : "") + t + "°"; }
+function wxWarn(){
+  if (!WX || !WX.ok) return "";
+  var H = WX.hourly || [], D = WX.daily || [], w = [], i, ice = false, storm = false;
+  for (i = 0; i < H.length; i++){ var c = H[i].code;
+    if (c === 56 || c === 57 || c === 66 || c === 67 || (H[i].pr >= 0.1 && H[i].t >= -4 && H[i].t <= 0.5)) ice = true;
+    if (c >= 95) storm = true; }
+  if (ice) w.push("🧊 Можлива ожеледь — обережно на дорозі й на подвір’ї.");
+  if (storm) w.push("⛈ Найближчим часом можлива гроза.");
+  var d2 = D.slice(0, 2), gust = Math.max.apply(null, d2.map(function(d){ return d.gust || 0; }).concat([0])),
+      tmin = Math.min.apply(null, d2.map(function(d){ return d.min; }).concat([99])), snow = Math.max.apply(null, d2.map(function(d){ return d.snow || 0; }).concat([0]));
+  if (gust >= 15) w.push("💨 Сильний вітер: пориви до " + Math.round(gust) + " м/с.");
+  if (tmin <= -10) w.push("🥶 Сильний мороз: уночі до " + sg(tmin) + ".");
+  if (snow >= 5) w.push("❄️ Сильний сніг: до " + Math.round(snow) + " см.");
+  return w.slice(0, 2).join("<br>");
+}
 function drawWx(){
+  var ww = wxWarn(); $("wxwarn").innerHTML = ww; $("wxwarn").hidden = !ww;
   if (!WX || !WX.ok){ $("wxt").textContent = "—"; $("wxd1").textContent = "Погода зараз недоступна"; $("wxf").textContent = ""; $("wxr").style.display = "none"; return; }
   var c = WX.current, k = wxKind(c.code, c.day);
   $("wxi").innerHTML = IC[k[0]].replace("<svg", '<svg class="wx-ic"');
@@ -552,15 +680,20 @@ function drawWx(){
 }
 
 /* ---------- завантаження ---------- */
-var LAST = 0;
+var LAST = 0, LOADN = 0;
 function load(){
   LAST = Date.now();
-  fetch(q("/api/state"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ ST = j; tick(); }).catch(function(){ $("upd").textContent = "немає зв’язку"; });
-  fetch(q("/api/weather"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ WX = j; drawWx(); }).catch(function(){ WX = null; drawWx(); });
+  var g = GRP; LOADN++;
+  fetch(q("/api/state?g=" + encodeURIComponent(g)), {cache: "no-store"}).then(function(r){ if (!r.ok) throw 0; return r.json(); })
+    .then(function(j){ if (g !== GRP) return; if (!j || !j.ok) throw 0; ST = j; OFFLINE = false; DARKN = j.dark || 0; BACKN = j.back || 0; LS.set("selo:st:" + g, JSON.stringify({at: Date.now(), d: j})); tick(); })
+    .catch(function(){ if (g !== GRP) return; var c = cached("selo:st:" + g); if (c){ ST = c.d; CACHEAT = c.at; OFFLINE = true; DARKN = 0; BACKN = 0; tick(); } else { $("upd").textContent = "немає зв’язку"; } });
+  if (LOADN > 1 && LOADN % 10 !== 1 && WX && WX.ok) return;
+  fetch(q("/api/weather"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ WX = j; if (j && j.ok) LS.set("selo:wx", JSON.stringify({at: Date.now(), d: j})); drawWx(); })
+    .catch(function(){ var c = cached("selo:wx", 3 * 3600e3); WX = c ? c.d : null; drawWx(); });
 }
 document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - LAST > 60000) load(); });
 setInterval(function(){ if (ST) tick(); }, 30000);
-setInterval(function(){ if (!document.hidden) load(); }, 5 * 60000);
+setInterval(function(){ if (!document.hidden) load(); }, 60000);
 
 $("seg").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; DAY = +b.getAttribute("data-d");
   [].forEach.call($("seg").children, function(x){ x.classList.toggle("on", x === b); }); drawDial(); });
@@ -597,14 +730,14 @@ function A_(ri, ro){ var c = C_(1); return {t: "a", cx: c.cx, cy: c.cy, ri: ri *
 function ROWS(k){ var l = $("list"), n = Math.min(k, l.children.length), f = l.children[0].getBoundingClientRect(), z = l.children[n - 1].getBoundingClientRect();
   return {t: "r", x: f.left - 8, y: f.top - 8, w: f.width + 16, h: z.bottom - f.top + 16}; }
 var STEPS = [
-  ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: є світло чи немає, і коли зміниться. Червона рамка — світла немає, зелена — є."],
-  ["dial", function(){ return [A_(103, 145), C_(58)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне — немає. Стрілка — котра зараз година. Те, що вже минуло, притемнене."],
+  ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: за графіком є світло чи немає, і коли зміниться. Червона рамка — немає, зелена — є. Якщо світло зникло не за графіком — натисніть «У мене світла немає», сусіди це побачать. Коли дадуть — «Світло з’явилось»."],
+  ["dial", function(){ return [A_(103, 145), C_(58)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне заштриховане — немає. Стрілка — котра зараз година. Те, що вже минуло, притемнене."],
   ["dial", function(){ return [A_(68, 96), R_("sun", 6)]; }, "Сонце: день і ніч", "Кільце всередині: жовте «день» — поки світить сонце, синє «ніч» — темно. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках."],
   ["seg", function(){ return [R_("seg", 6)]; }, "Сьогодні і завтра", "Натисніть «Завтра», щоб побачити графік на завтра. «Сьогодні» — повернутися."],
-  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "☀ — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз»."],
+  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "💡 — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз»."],
   ["weather", function(){ return [R_("wxtop")]; }, "Погода", "Температура зараз, чи буде дощ або сніг і до котрої години, погода на найближчі години. Нижче — прогноз на 3 дні."],
   ["stats", function(){ return [R_("statnums")]; }, "Скільки без світла", "Скільки годин без світла за графіком сьогодні, завтра і за останній тиждень."],
-  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Додати Сяйво на екран телефона, ще раз подивитися цей тур або змінити розмір шрифту."]];
+  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Надіслати графік картинкою рідним чи сусідам, додати Сяйво на екран телефона, ще раз подивитися цей тур або змінити розмір шрифту."]];
 var DESK = function(){ return matchMedia("(min-width:1100px)").matches; };
 function smoothTo(y, cb){
   var y0 = window.scrollY, dy = y - y0, t0 = null, dur = Math.min(900, 300 + Math.abs(dy) * 0.6);
@@ -699,6 +832,59 @@ function sheet(dev){
     '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div>';
 }
 function closeSheet(){ if ($("sheet")) $("overlay").innerHTML = ""; }
+function sheetBox(inner){ $("overlay").innerHTML = '<div class="sheet" id="sheet"><div class="sh" role="dialog" aria-modal="true">' + inner + '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div>'; }
+/* черга */
+function grpSheet(){
+  sheetBox('<h3>Яка у вас черга?</h3><p>Майже все село — у черзі <b>6.2</b>. Якщо у вас інша, оберіть її — Сяйво запам’ятає. Свою чергу можна побачити на сайті ДТЕК за адресою.</p><div class="pick grp">' +
+    GROUPS.map(function(g, i){ return '<button data-grp="' + g + '" class="' + (g === GRP ? "on" : "") + '">' + g + '<small>' + (i ? "&nbsp;" : "більшість села") + '</small></button>'; }).join("") + '</div>');
+}
+$("grpbtn").addEventListener("click", grpSheet);
+function setGrp(g){ if (GROUPS.indexOf(g) < 0) return; GRP = g; LS.set("selo:grp", g); var c = cached("selo:st:" + g); ST = c ? c.d : null; CACHEAT = c ? c.at : 0; OFFLINE = false; $("grp").textContent = g;
+  if (!ST) $("upd").textContent = "завантаження…"; tick(); load(); }
+/* телефони (на комп'ютері — у вікні) */
+$("callbtn").addEventListener("click", function(){ sheetBox('<h3>Подзвонити</h3><p>Номери служб</p><div class="calls">' + $("callbox").innerHTML + '</div>'); });
+/* надіслати графік картинкою */
+var SHBLOB = null, SHDAY = 0;
+function rr(x, a, b, w, h, r, fill){ x.beginPath(); x.moveTo(a + r, b); x.arcTo(a + w, b, a + w, b + h, r); x.arcTo(a + w, b + h, a, b + h, r); x.arcTo(a, b + h, a, b, r); x.arcTo(a, b, a + w, b, r); x.closePath(); x.fillStyle = fill; x.fill(); }
+function shareTitle(day){ var key = day ? TOMORROW : TODAY, p = key.split("-"), dt = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+  return (day ? "Завтра" : "Сьогодні") + ", " + ["неділя", "понеділок", "вівторок", "середа", "четвер", "п’ятниця", "субота"][dt.getUTCDay()] + " " + (+p[2]) + " " +
+    ["січня", "лютого", "березня", "квітня", "травня", "червня", "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"][+p[1] - 1]; }
+function shareCanvas(day){
+  var iv = intervals(day ? TOMORROW : TODAY); if (!iv) return null;
+  var S = segs(iv), W = 1080, RH = 108, TOP = 290, H = TOP + S.length * RH + 150, c = document.createElement("canvas"); c.width = W; c.height = H;
+  var x = c.getContext("2d"), F = 'px "Onest",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
+  x.fillStyle = "#F2F4F7"; x.fillRect(0, 0, W, H); x.textBaseline = "middle"; x.textAlign = "center";
+  x.fillStyle = "#101A26"; x.font = "800 66" + F; x.fillText("Світло в Наливайківці", W / 2, 88);
+  x.font = "700 46" + F; x.fillText(shareTitle(day), W / 2, 168);
+  x.fillStyle = "#4F5E70"; x.font = "600 38" + F; x.fillText("Графік ДТЕК · черга " + GRP, W / 2, 230);
+  S.forEach(function(s, i){ var y = TOP + i * RH, hh = RH - 16, on = s[2] === "on", mb = s[2] === "maybe", col = on ? "#17805F" : mb ? "#9A6B00" : "#C2341F";
+    rr(x, 50, y, W - 100, hh, 26, on ? "#DDF1E8" : mb ? "#F6EDD3" : "#F9DDD7"); rr(x, 50, y, 22, hh, 11, col);
+    x.textAlign = "left"; x.fillStyle = "#101A26"; x.font = "800 54" + F; x.fillText(hm(s[0]) + " – " + hm(s[1]), 104, y + hh / 2 + 2);
+    x.textAlign = "right"; x.fillStyle = col; x.font = "800 44" + F; x.fillText(on ? "світло є" : mb ? "можливо немає" : "немає світла", W - 86, y + hh / 2 + 2); });
+  var cp = TODAY.split("-"); x.textAlign = "center"; x.fillStyle = "#4F5E70"; x.font = "600 34" + F;
+  x.fillText("Станом на " + hm(NOWM) + " " + cp[2] + "." + cp[1] + " · графік може змінитися", W / 2, H - 98);
+  x.fillStyle = "#101A26"; x.font = "800 36" + F; x.fillText("Сяйво Наливайківки", W / 2, H - 44);
+  return c;
+}
+function canShareFile(){ try { return !!(navigator.canShare && window.File && navigator.canShare({files: [new File([new Blob(["x"], {type: "image/png"})], "g.png", {type: "image/png"})]})); } catch (e) { return false; } }
+function shareSheet(day){
+  SHDAY = day; SHBLOB = null; var c = shareCanvas(day), can = canShareFile(), body;
+  if (!c) body = '<p style="margin:6px 0 4px">' + (day ? "ДТЕК ще не оприлюднив графік на завтра. Зазвичай він з’являється ввечері." : "Графіка на сьогодні поки немає.") + '</p>';
+  else { var u = c.toDataURL("image/png"); if (c.toBlob) c.toBlob(function(b){ SHBLOB = b; }, "image/png");
+    body = '<img class="shimg" src="' + u + '" alt="Графік картинкою">' +
+      (can ? '<button class="btn pri" id="shsend" style="width:100%;min-height:64px">📤 Надіслати</button><p style="margin:10px 0 0">Далі оберіть Viber, Telegram чи іншу програму.</p>' : '') +
+      '<a class="btn sec" id="shsave" style="width:100%;margin-top:12px" download="grafik-svitla-' + (day ? TOMORROW : TODAY) + '.png" href="' + u + '">Зберегти картинку</a>' +
+      (can ? '' : '<p style="margin:10px 0 0">Збережіть картинку, а потім надішліть її у Viber чи Telegram, як звичайне фото.</p>'); }
+  sheetBox('<h3>Надіслати графік</h3><p>Картинка з графіком — для рідних і сусідів</p><div class="seg"><button data-shd="0" class="' + (day ? "" : "on") + '">Сьогодні</button><button data-shd="1" class="' + (day ? "on" : "") + '">Завтра</button></div>' + body);
+}
+$("sharebtn").addEventListener("click", function(){ var go = function(){ shareSheet(DAY); }; if (document.fonts && document.fonts.ready) document.fonts.ready.then(go, go); else go(); });
+$("overlay").addEventListener("click", function(e){
+  var g = e.target.closest("[data-grp]"); if (g){ closeSheet(); return setGrp(g.getAttribute("data-grp")); }
+  var d = e.target.closest("[data-shd]"); if (d) return shareSheet(+d.getAttribute("data-shd"));
+  if (e.target.closest("#shsend") && SHBLOB){ try { var f = new File([SHBLOB], "grafik-svitla.png", {type: "image/png"});
+    navigator.share({files: [f], text: "Графік світла в Наливайківці: " + shareTitle(SHDAY).toLowerCase() + " (черга " + GRP + ")"}).then(function(){ sendHit("share"); }, function(){}); } catch (er) {} }
+  if (e.target.closest("#shsave")) sendHit("share");
+});
 $("addbtn").addEventListener("click", function(){ sheet(IOS ? "ios" : AND ? "android" : "ios"); });
 $("overlay").addEventListener("click", function(e){
   var d = e.target.closest("[data-dev]"); if (d) return sheet(d.getAttribute("data-dev"));
@@ -724,6 +910,7 @@ if (LS.get("selo:seen") !== "1") hello(true);
 // вітальне вікно не зникає саме: якщо телефон перезавантажив сторінку чи її згорнули — показуємо знову, поки людина не натисне кнопку
 document.addEventListener("visibilitychange", function(){ if (!document.hidden && LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
 addEventListener("pageshow", function(){ if (LS.get("selo:seen") !== "1" && !$("hello") && !TOUR) hello(true); });
+(function(){ var c = cached("selo:st:" + GRP); if (c){ ST = c.d; CACHEAT = c.at; } })();
 tick(); load(); opened();
 </script>
 </body>

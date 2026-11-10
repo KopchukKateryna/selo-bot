@@ -5,7 +5,26 @@ async function asset(env, name, type) {
   if (!r.ok) throw new Error("asset " + name + " " + r.status);
   return type === "text" ? r.text() : r.arrayBuffer();
 }
+let LASTPAGE = null;
+const PAGE_BACKUP = "https://selo-bot.backup/page.html";
+async function pageHtml(env, ctx) {
+  try {
+    const page = await asset(env, "page.html", "text");
+    if (page !== LASTPAGE && page.indexOf("</html>") > 0) {
+      LASTPAGE = page;
+      ctx.waitUntil(caches.default.put(new Request(PAGE_BACKUP), new Response(page, {headers: {"content-type": "text/html; charset=utf-8", "cache-control": "public, max-age=2592000"}})).catch(() => {}));
+    }
+    return page;
+  } catch (e) {
+    if (LASTPAGE) return LASTPAGE;
+    const hit = await caches.default.match(new Request(PAGE_BACKUP)).catch(() => null);
+    if (hit) return hit.text();
+    throw e;
+  }
+}
 const LAT = 50.476, LON = 29.70;
+const GROUPS = ["6.2", "5.1", "5.2", "1.1"];
+const DARK_MS = 2 * 3600 * 1000, BACK_MS = 3600 * 1000;
 const KEEP_MS = 30 * 60 * 1000;
 const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o), {status, headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store", ...extra}});
 function kyivDate(d = new Date()) {
@@ -63,27 +82,46 @@ async function ingest(req, env) {
   const now = new Date(), today = kyivDate(now);
   const next = {...prev};
   if (body.ok && body.days && typeof body.days === "object") {
-    const days = {};
-    for (const [k, v] of Object.entries(body.days)) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(v) && k >= today)
-        days[k] = v.filter(x => Array.isArray(x) && x.length >= 3).map(x => [Math.max(0, Math.min(1440, +x[0])), Math.max(0, Math.min(1440, +x[1])), x[2] === "maybe" ? "maybe" : "off"]);
-    }
-    for (const [k, v] of Object.entries(prev.days || {})) if (k >= today && !days[k] && k === addDay(today, 1)) days[k] = v;
+    const norm = (src, old) => {
+      const days = {};
+      for (const [k, v] of Object.entries(src)) {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(k) && Array.isArray(v) && k >= today)
+          days[k] = v.filter(x => Array.isArray(x) && x.length >= 3).map(x => [Math.max(0, Math.min(1440, +x[0])), Math.max(0, Math.min(1440, +x[1])), x[2] === "maybe" ? "maybe" : "off"]);
+      }
+      for (const [k, v] of Object.entries(old || {})) if (k >= today && !days[k] && k === addDay(today, 1)) days[k] = v;
+      return days;
+    };
+    const histOf = (days, old) => {
+      const hist = {...(old || {})};
+      for (const [k, v] of Object.entries(days)) if (k === today) hist[k] = offMin(v);
+      for (const k of Object.keys(hist)) if (k < addDay(today, -10)) delete hist[k];
+      return hist;
+    };
+    const days = norm(body.days, prev.days);
     next.days = days;
     next.outage = body.outage || null;
     if (body.notice !== undefined && body.notice !== null) next.notice = body.notice;
     if (body.group) next.group = String(body.group).replace(/^GPV/i, "");
-    const hist = {...(prev.hist || {})};
-    for (const [k, v] of Object.entries(days)) if (k === today) hist[k] = offMin(v);
-    for (const k of Object.keys(hist)) if (k < addDay(today, -10)) delete hist[k];
-    next.hist = hist;
+    next.hist = histOf(days, prev.hist);
+    // інші черги села (скрапер бере їх тим самим запитом); старий скрапер без них — лишаємо, що було
+    if (body.groups && typeof body.groups === "object") {
+      const g = {};
+      for (const name of GROUPS) {
+        const src = body.groups[name];
+        if (name === (next.group || "6.2") || !src || typeof src !== "object") continue;
+        const old = (prev.g || {})[name] || {};
+        const d = norm(src, old.days);
+        g[name] = {days: d, hist: histOf(d, old.hist)};
+      }
+      next.g = g;
+    }
     next.err = null;
     next.checked_at = now.toISOString();
   } else {
     next.err = String(body.error || "помилка скрапера").slice(0, 300);
     next.errAt = now.toISOString();
   }
-  const sig = o => JSON.stringify([o.days, o.outage, o.notice, o.group, o.hist, o.err]);
+  const sig = o => JSON.stringify([o.days, o.outage, o.notice, o.group, o.hist, o.err, o.g || null]);
   const changed = sig(prev) !== sig(next);
   const stale = !prev.writtenAt || now - new Date(prev.writtenAt) > KEEP_MS;
   if (changed || (body.ok && stale)) {
@@ -94,13 +132,59 @@ async function ingest(req, env) {
   }
   return json({ok: true, written: false});
 }
-async function apiState(env) {
+async function apiState(env, g) {
   const s = await readState(env);
   const today = kyivDate();
+  const main = s.group || "6.2";
+  const group = GROUPS.indexOf(g) >= 0 ? g : main;
+  const src = group === main ? s : ((s.g || {})[group] || {days: {}, hist: {}});
   const days = {};
-  for (const [k, v] of Object.entries(s.days || {})) if (k >= today) days[k] = v;
-  return {ok: true, group: s.group || "6.2", days, notice: s.notice || null, outage: s.outage || null,
-    hist: s.hist || {}, checked_at: s.checked_at || null, updated_at: s.updated_at || null, err: s.err || null};
+  for (const [k, v] of Object.entries(src.days || {})) if (k >= today) days[k] = v;
+  const dk = await darkCount(env);
+  return {ok: true, group, days, notice: s.notice || null, outage: s.outage || null,
+    hist: src.hist || {}, checked_at: s.checked_at || null, updated_at: s.updated_at || null, err: s.err || null, dark: dk.n, back: dk.b};
+}
+// «У мене світла немає» / «світло з'явилось»: один запис на браузер (анонімний номер).
+// st = 1 — світла немає (діє 2 години), st = 0 — світло з'явилось (рахуємо за останню годину)
+async function darkCount(env) {
+  try {
+    const db = await sdb(env); if (!db) return {n: 0, b: 0};
+    const now = Date.now();
+    const r = await db.prepare("SELECT SUM(st = 1 AND ts > ?) AS n, SUM(st = 0 AND ts > ?) AS b FROM dark").bind(now - DARK_MS, now - BACK_MS).first();
+    return {n: (r && r.n) || 0, b: (r && r.b) || 0};
+  } catch (e) { return {n: 0, b: 0}; }
+}
+async function dark(req, env) {
+  let b; try { b = await req.json(); } catch (e) { return json({ok: false, error: "bad json"}, 400); }
+  const uid = String(b.uid || "");
+  if (!/^[a-z0-9-]{8,40}$/.test(uid) || /bot|crawl|spider|preview/i.test(req.headers.get("user-agent") || "")) return json({ok: false, error: "bad request"}, 400);
+  const db = await sdb(env); if (!db) return json({ok: false, error: "немає бази"}, 503);
+  const now = Date.now();
+  // запобіжник від накрутки: не більше 60 нових позначок за 10 хвилин на все село (свою позначку змінити можна завжди)
+  const burst = await db.prepare("SELECT COUNT(*) AS n, SUM(uid = ?) AS me FROM dark WHERE ts > ?").bind(uid, now - 600000).first();
+  if (((burst && burst.n) || 0) < 60 || (burst && burst.me))
+    await db.prepare("INSERT INTO dark (uid, ts, st) VALUES (?, ?, ?) ON CONFLICT(uid) DO UPDATE SET ts = excluded.ts, st = excluded.st").bind(uid, now, b.on ? 1 : 0).run();
+  await db.prepare("DELETE FROM dark WHERE ts < ?").bind(now - 86400000).run();
+  const dk = await darkCount(env);
+  return json({ok: true, n: dk.n, b: dk.b});
+}
+// нагляд за скрапером: якщо графік давно не оновлювався — повідомлення в Telegram (лише коли задано секрети ALERT_BOT_TOKEN і ALERT_CHAT_ID)
+const WATCH_MS = 75 * 60 * 1000;
+async function watch(env, fetcher = fetch) {
+  if (!env.ALERT_BOT_TOKEN || !env.ALERT_CHAT_ID) return "off";
+  const s = await readState(env);
+  const w = (await env.STATE.get("watch", "json")) || {};
+  const age = s.checked_at ? Date.now() - Date.parse(s.checked_at) : Infinity;
+  const down = age > WATCH_MS;
+  if (down === !!w.down) return "same";
+  const text = down
+    ? "⚠️ Сяйво Наливайківки: графік не оновлюється" + (isFinite(age) ? " уже " + Math.round(age / 60000) + " хв" : "") + ".\nСкрапер у GitHub, схоже, зупинився." + (s.err ? "\nОстання помилка: " + s.err : "")
+    : "✅ Сяйво Наливайківки: графік знову оновлюється.";
+  const r = await fetcher("https://api.telegram.org/bot" + env.ALERT_BOT_TOKEN + "/sendMessage", {method: "POST", headers: {"content-type": "application/json"},
+    body: JSON.stringify({chat_id: env.ALERT_CHAT_ID, text})});
+  if (!r.ok) { console.log("watch: telegram", r.status); return "fail"; }
+  await env.STATE.put("watch", JSON.stringify({down, at: new Date().toISOString()}));
+  return down ? "down" : "up";
 }
 async function apiWeather() {
   const u = new URL("https://api.open-meteo.com/v1/forecast");
@@ -108,7 +192,7 @@ async function apiWeather() {
     latitude: LAT, longitude: LON, timezone: "Europe/Kyiv", wind_speed_unit: "ms", forecast_days: "3", forecast_hours: "14",
     current: "temperature_2m,apparent_temperature,weather_code,wind_speed_10m,is_day",
     hourly: "temperature_2m,precipitation_probability,precipitation,weather_code,is_day",
-    daily: "weather_code,temperature_2m_max,temperature_2m_min,rain_sum,showers_sum,snowfall_sum",
+    daily: "weather_code,temperature_2m_max,temperature_2m_min,rain_sum,showers_sum,snowfall_sum,wind_gusts_10m_max",
   }).toString();
   const r = await fetch(u.toString(), {cf: {cacheTtl: 1800, cacheEverything: true}});
   if (!r.ok) throw new Error("open-meteo " + r.status);
@@ -117,7 +201,7 @@ async function apiWeather() {
   const hourly = (h.time || []).map((t, i) => ({time: t.slice(11, 16), t: h.temperature_2m[i], pp: h.precipitation_probability ? h.precipitation_probability[i] || 0 : 0,
     pr: h.precipitation ? h.precipitation[i] || 0 : 0, code: h.weather_code[i], day: h.is_day ? h.is_day[i] === 1 : true}));
   const daily = (d.time || []).map((t, i) => ({date: t, min: d.temperature_2m_min[i], max: d.temperature_2m_max[i], code: d.weather_code[i],
-    rain: (d.rain_sum ? d.rain_sum[i] || 0 : 0) + (d.showers_sum ? d.showers_sum[i] || 0 : 0), snow: d.snowfall_sum ? d.snowfall_sum[i] || 0 : 0}));
+    rain: (d.rain_sum ? d.rain_sum[i] || 0 : 0) + (d.showers_sum ? d.showers_sum[i] || 0 : 0), snow: d.snowfall_sum ? d.snowfall_sum[i] || 0 : 0, gust: d.wind_gusts_10m_max ? d.wind_gusts_10m_max[i] || 0 : 0}));
   return {ok: true, current: {t: c.temperature_2m, feels: c.apparent_temperature, code: c.weather_code, wind: c.wind_speed_10m, day: c.is_day === 1}, hourly, daily};
 }
 let DBREADY = false;
@@ -126,6 +210,7 @@ async function sdb(env) {
   if (!DBREADY) {
     await env.DB.prepare("CREATE TABLE IF NOT EXISTS hits (ts INTEGER, day TEXT, hour INTEGER, uid TEXT, ev TEXT, sa INTEGER, dev TEXT, fs INTEGER)").run();
     await env.DB.prepare("CREATE INDEX IF NOT EXISTS hits_day ON hits(day)").run();
+    await env.DB.prepare("CREATE TABLE IF NOT EXISTS dark (uid TEXT PRIMARY KEY, ts INTEGER, st INTEGER)").run();
     DBREADY = true;
   }
   return env.DB;
@@ -134,7 +219,7 @@ function kyivHour(d = new Date()) { return +new Intl.DateTimeFormat("en-GB", {ti
 async function hit(req, env) {
   let b; try { b = await req.json(); } catch (e) { return new Response(null, {status: 204}); }
   const uid = String(b.uid || ""), ev = String(b.ev || "");
-  if (!/^[a-z0-9-]{8,40}$/.test(uid) || ["open", "tour", "font"].indexOf(ev) < 0) return new Response(null, {status: 204});
+  if (!/^[a-z0-9-]{8,40}$/.test(uid) || ["open", "tour", "font", "share"].indexOf(ev) < 0) return new Response(null, {status: 204});
   if (/bot|crawl|spider|preview/i.test(req.headers.get("user-agent") || "")) return new Response(null, {status: 204});
   const dev = ["ios", "android", "desktop"].indexOf(b.dev) >= 0 ? b.dev : "other";
   const db = await sdb(env); if (!db) return new Response(null, {status: 204});
@@ -155,7 +240,8 @@ async function apiStats(env) {
   const all = r => (r.results || []);
   const q = (sql, ...a) => db.prepare(sql).bind(...a).all().then(all);
   const one = async (sql, ...a) => (await q(sql, ...a))[0] || {};
-  const [tot, days, first, sa, dev, tour, big, hours] = await Promise.all([
+  const st = await readState(env);
+  const [tot, days, first, sa, dev, tour, big, hours, share] = await Promise.all([
     one("SELECT COUNT(DISTINCT uid) AS users, SUM(ev = 'open') AS opens FROM hits"),
     q("SELECT day, SUM(ev = 'open') AS opens, COUNT(DISTINCT uid) AS users FROM hits WHERE day >= ? GROUP BY day", from),
     q("SELECT f AS day, COUNT(*) AS n FROM (SELECT uid, MIN(day) AS f FROM hits GROUP BY uid) WHERE f >= ? GROUP BY f", from),
@@ -164,11 +250,13 @@ async function apiStats(env) {
     one("SELECT COUNT(DISTINCT uid) AS users FROM hits WHERE ev = 'tour'"),
     one("SELECT COUNT(DISTINCT uid) AS users FROM hits WHERE fs >= 2"),
     q("SELECT hour, COUNT(*) AS opens FROM hits WHERE ev = 'open' AND day >= ? GROUP BY hour", addDay(today, -6)),
+    one("SELECT COUNT(DISTINCT uid) AS users FROM hits WHERE ev = 'share'"),
   ]);
   const nf = {}; first.forEach(r => nf[r.day] = r.n);
   const dm = {}; days.forEach(r => dm[r.day] = r);
   const series = []; for (let i = 13; i >= 0; i--) { const d = addDay(today, -i); series.push({day: d, opens: (dm[d] || {}).opens || 0, users: (dm[d] || {}).users || 0, fresh: nf[d] || 0}); }
-  return {ok: true, today, total: {users: tot.users || 0, opens: tot.opens || 0}, series, sa, dev, tour: tour.users || 0, bigFont: big.users || 0, hours};
+  return {ok: true, today, total: {users: tot.users || 0, opens: tot.opens || 0}, series, sa, dev, tour: tour.users || 0, bigFont: big.users || 0, hours, share: share.users || 0, dark: (await darkCount(env)).n,
+    scraper: {checked_at: st.checked_at || null, err: st.err || null, errAt: st.errAt || null}};
 }
 const STATS_PAGE = "<!doctype html><html lang=\"uk\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light dark\"><title>Статистика · Сяйво Наливайківки</title><link rel=\"icon\" type=\"image/svg+xml\" href=\"/favicon.svg\"><link href=\"https://fonts.googleapis.com/css2?family=Onest:wght@400;600;800&display=swap\" rel=\"stylesheet\"><style>" +
   ":root{--bg:#F2F4F7;--surface:#fff;--ink:#14202E;--muted:#66758A;--line:#E3E8EE;--accent:#3566D6;--on:#1F8A70;--warm:#E39A1C}@media(prefers-color-scheme:dark){:root{--bg:#0E1621;--surface:#152233;--ink:#E6ECF3;--muted:#8FA0B5;--line:#22324A;--accent:#6E9BFF;--on:#35B88F;--warm:#F0B44A}}" +
@@ -182,11 +270,13 @@ const STATS_PAGE = "<!doctype html><html lang=\"uk\"><head><meta charset=\"utf-8
   "fetch('/api/stats',{cache:'no-store'}).then(function(r){return r.json()}).then(function(s){if(!s.ok){document.getElementById('sub').textContent='Немає даних: '+(s.error||'');return}" +
   "var t=s.series[s.series.length-1],y=s.series[s.series.length-2]||{},mx=Math.max.apply(null,s.series.map(function(d){return Math.max(d.opens,d.users,1)}));" +
   "document.getElementById('sub').textContent='Оновлено '+new Date().toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})+' · дані з першого дня роботи Сяйва села';" +
-  "var h='<div class=\"grid\"><div class=\"card k\"><span>Усього людей</span><b>'+n(s.total.users)+'</b><small>за весь час</small></div><div class=\"card k\"><span>Сьогодні відкривали</span><b>'+n(t.opens)+'</b><small>учора '+n(y.opens)+'</small></div><div class=\"card k\"><span>Людей сьогодні</span><b>'+n(t.users)+'</b><small>учора '+n(y.users)+'</small></div><div class=\"card k\"><span>Нових сьогодні</span><b>'+n(t.fresh)+'</b><small>учора '+n(y.fresh)+'</small></div></div>';" +
+  "var sc=s.scraper||{},sa2=sc.checked_at?Math.round((Date.now()-Date.parse(sc.checked_at))/60000):null,bad=sa2===null||sa2>75;" +
+  "var hc='<div class=\"card\" style=\"margin-bottom:12px;border:2px solid '+(bad?'#C8402B':'transparent')+'\"><b>'+(bad?'⚠️ Графік ДТЕК не оновлюється':'✓ Графік ДТЕК оновлюється')+'</b> <span style=\"color:var(--muted)\">· остання перевірка '+(sa2===null?'— ще не було':sa2<1?'щойно':sa2<60?sa2+' хв тому':Math.floor(sa2/60)+' год тому')+(sc.err?' · помилка: '+String(sc.err).replace(/</g,'&lt;'):'')+'</span><br><span style=\"color:var(--muted)\">Зараз «У мене світла немає»: <b style=\"color:var(--ink)\">'+n(s.dark)+'</b></span></div>';" +
+  "var h=hc+'<div class=\"grid\"><div class=\"card k\"><span>Усього людей</span><b>'+n(s.total.users)+'</b><small>за весь час</small></div><div class=\"card k\"><span>Сьогодні відкривали</span><b>'+n(t.opens)+'</b><small>учора '+n(y.opens)+'</small></div><div class=\"card k\"><span>Людей сьогодні</span><b>'+n(t.users)+'</b><small>учора '+n(y.users)+'</small></div><div class=\"card k\"><span>Нових сьогодні</span><b>'+n(t.fresh)+'</b><small>учора '+n(y.fresh)+'</small></div></div>';" +
   "h+='<div class=\"row2\"><div class=\"card\"><h2>Останні 14 днів</h2><div class=\"bars\">'+s.series.map(function(d){var p=d.day.split('-'),w=DW[new Date(Date.UTC(+p[0],+p[1]-1,+p[2])).getUTCDay()];return '<div title=\"'+d.day+': відкриттів '+d.opens+', людей '+d.users+', нових '+d.fresh+'\"><b>'+(d.opens||'')+'</b><span class=\"p\"><i style=\"height:'+(d.opens/mx*100)+'%\"></i><u style=\"height:'+(d.users/mx*100)+'%\"></u></span><em><s>'+w+' </s>'+(+p[2])+'</em></div>'}).join('')+'</div><div class=\"lg\"><span><i style=\"background:var(--accent)\"></i>відкриття</span><span><i style=\"background:var(--on)\"></i>люди</span></div></div>';" +
   "var su=0,ss=0;(s.sa||[]).forEach(function(r){su+=r.opens;if(r.sa)ss+=r.opens});var du=0,dv={};(s.dev||[]).forEach(function(r){du+=r.users;dv[r.dev]=r.users});" +
   "function sh(l,a,b){return '<div class=\"sh\"><span>'+l+'</span><div class=\"b\"><i style=\"width:'+(b?a*100/b:0)+'%\"></i></div><b>'+pct(a,b)+' <small>('+n(a)+')</small></b></div>'}" +
-  "h+='<div class=\"card\"><h2>Як користуються (14 днів)</h2>'+sh('📲 зі значка',ss,su)+sh('🌐 у браузері',su-ss,su)+'<div style=\"height:8px\"></div>'+sh('iPhone',dv.ios||0,du)+sh('Android',dv.android||0,du)+sh('Комп’ютер',dv.desktop||0,du)+(dv.other?sh('Інше',dv.other,du):'')+'<div style=\"height:8px\"></div>'+sh('Пройшли тур',s.tour,s.total.users)+sh('Більший шрифт',s.bigFont,s.total.users)+'</div></div>';" +
+  "h+='<div class=\"card\"><h2>Як користуються (14 днів)</h2>'+sh('📲 зі значка',ss,su)+sh('🌐 у браузері',su-ss,su)+'<div style=\"height:8px\"></div>'+sh('iPhone',dv.ios||0,du)+sh('Android',dv.android||0,du)+sh('Комп’ютер',dv.desktop||0,du)+(dv.other?sh('Інше',dv.other,du):'')+'<div style=\"height:8px\"></div>'+sh('Пройшли тур',s.tour,s.total.users)+sh('Більший шрифт',s.bigFont,s.total.users)+sh('Надсилали графік',s.share,s.total.users)+'</div></div>';" +
   "var hm={},hx=1;(s.hours||[]).forEach(function(r){hm[r.hour]=r.opens;hx=Math.max(hx,r.opens)});var hh='',lb='';for(var i=0;i<24;i++){hh+='<i title=\"'+i+':00 — '+(hm[i]||0)+'\" style=\"height:'+((hm[i]||0)/hx*100)+'%\"></i>';lb+='<span>'+(i%3?'':String(i).padStart(2,'0'))+'</span>'}" +
   "h+='<div class=\"card\" style=\"margin-top:12px\"><h2>Коли відкривають (останні 7 днів, за годинами)</h2><div class=\"hrs\">'+hh+'</div><div class=\"hx\">'+lb+'</div></div>';document.getElementById('app').innerHTML=h})" +
   ".catch(function(){document.getElementById('sub').textContent='Не вдалося завантажити'});</script></body></html>";
@@ -199,7 +289,29 @@ function manifest(a) {
             {src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any"},
             {src: "/icon-512.png", sizes: "512x512", type: "image/png", purpose: "maskable"}]};
 }
-const SW = "self.addEventListener(\"install\",e=>self.skipWaiting());\nself.addEventListener(\"activate\",e=>e.waitUntil(self.clients.claim()));\nself.addEventListener(\"fetch\",e=>{});";
+const SW = `const C = "selo-v2";
+self.addEventListener("install", e => self.skipWaiting());
+self.addEventListener("activate", e => e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x)))).then(() => self.clients.claim())));
+self.addEventListener("fetch", e => {
+  const r = e.request; if (r.method !== "GET") return;
+  const u = new URL(r.url);
+  // сторінка: спершу з мережі (до 6 с), без зв'язку чи при збої сервера — остання збережена
+  if (r.mode === "navigate" && u.origin === location.origin && (u.pathname === "/" || u.pathname === "/index.html")) {
+    e.respondWith((async () => {
+      const c = await caches.open(C), saved = await c.match("/");
+      try {
+        const res = await Promise.race([fetch(r), new Promise((_, no) => setTimeout(() => no(new Error("slow")), saved ? 6000 : 30000))]);
+        if (res.ok) { c.put("/", res.clone()); return res; }
+        return res.status >= 500 && saved ? saved : res;
+      } catch (err) { if (saved) return saved; throw err; }
+    })());
+    return;
+  }
+  // шрифт і значки: один раз завантажили — далі з пам'яті телефона
+  if (u.hostname === "fonts.googleapis.com" || u.hostname === "fonts.gstatic.com" || (u.origin === location.origin && /^\\/(icon-|favicon|apple-touch)/.test(u.pathname))) {
+    e.respondWith(caches.open(C).then(c => c.match(r).then(m => m || fetch(r).then(res => { if (res.ok || res.type === "opaque") c.put(r, res.clone()); return res; }))));
+  }
+});`;
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -225,12 +337,19 @@ export default {
       if (p === "/manifest.webmanifest") return new Response(JSON.stringify(manifest(a)), {headers: {"content-type": "application/manifest+json", "cache-control": "no-cache"}});
       if (!a.ok) return p.startsWith("/api/") ? json({ok: false, error: "no access"}, 403) : new Response(DENY, {status: 403, headers: {"content-type": "text/html; charset=utf-8"}});
       if (p === "/api/state") {
-        const cache = caches.default, key = new Request(url.origin + "/api/state?c=1");
+        const g = GROUPS.indexOf(url.searchParams.get("g")) >= 0 ? url.searchParams.get("g") : "";
+        const cache = caches.default, key = new Request(url.origin + "/api/state?c=2&g=" + g);
         const hit = await cache.match(key);
         if (hit) return new Response(hit.body, {headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
-        const body = JSON.stringify(await apiState(env));
+        const body = JSON.stringify(await apiState(env, g));
         ctx.waitUntil(cache.put(key, new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=60"}})));
         return new Response(body, {headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
+      }
+      if (p === "/api/dark" && req.method === "POST") {
+        const res = await dark(req, env);
+        // щоб сусіди побачили нове число одразу, а не через хвилину
+        ctx.waitUntil(Promise.all([""].concat(GROUPS).map(g => caches.default.delete(new Request(url.origin + "/api/state?c=2&g=" + g)))).catch(() => {}));
+        return res;
       }
       if (p === "/api/hit" && req.method === "POST") { try { return await hit(req, env); } catch (e) { return new Response(null, {status: 204}); } }
       if (p === "/api/weather") {
@@ -241,14 +360,19 @@ export default {
         const headers = {"content-type": "text/html; charset=utf-8", "cache-control": "no-cache", "x-robots-tag": "noindex"};
         if (a.set) headers["set-cookie"] = "selo=" + encodeURIComponent(a.k) + "; Path=/; Max-Age=31536000; Secure; HttpOnly; SameSite=Lax";
         let page;
-        try { page = await asset(env, "page.html", "text"); }
+        try { page = await pageHtml(env, ctx); }
         catch (e) { return new Response("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><p style='font:20px system-ui;padding:24px'>Сяйво тимчасово недоступне. Спробуйте за хвилину.</p>", {status: 503, headers: {"content-type": "text/html; charset=utf-8"}}); }
         const html = page.split("/*KQ*/").join(a.k ? "?k=" + encodeURIComponent(a.k) : "");
         return new Response(html, {headers});
       }
       return new Response("Не знайдено", {status: 404});
     } catch (e) {
+      console.log("selo error", p, String((e && e.stack) || e));
       return json({ok: false, error: String(e && e.message || e)}, 500);
     }
   },
+  async scheduled(ev, env, ctx) {
+    ctx.waitUntil(watch(env).catch(e => console.log("watch error", String(e))));
+  },
 };
+export const _test = {watch, dark, darkCount, apiState, ingest};
