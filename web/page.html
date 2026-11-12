@@ -913,5 +913,67 @@ addEventListener("pageshow", function(){ if (LS.get("selo:seen") !== "1" && !$("
 (function(){ var c = cached("selo:st:" + GRP); if (c){ ST = c.d; CACHEAT = c.at; } })();
 tick(); load(); opened();
 </script>
+<style>
+input[type=date],input[type=time],input[type=month],input[type=datetime-local]{-webkit-appearance:none;appearance:none;min-width:0;max-width:100%;box-sizing:border-box}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value,input[type=month]::-webkit-date-and-time-value,input[type=datetime-local]::-webkit-date-and-time-value{text-align:left}
+</style>
+<script>
+/* Сяйво: під відкритим вікном сторінка не прокручується; свайп від краю екрана не виходить зі Сяйва */
+(function(){
+  var html = document.documentElement, body = document.body, locked = false, y = 0, fixed = [], raf = 0, scanT = 0;
+  function isFixed(el){ return getComputedStyle(el).position === "fixed"; }
+  function shown(el){ return el.isConnected && el.getClientRects().length > 0; }
+  function scan(){ fixed = [].filter.call(body.getElementsByTagName("*"), isFixed); }
+  function covering(el){ if (getComputedStyle(el).pointerEvents === "none") return false; var r = el.getBoundingClientRect(); return r.width >= innerWidth * 0.9 && r.height >= innerHeight * 0.6; } // затінення підказок (pointer-events:none) — не вікно
+  function anyOpen(){
+    for (var i = 0; i < fixed.length; i++){ var el = fixed[i]; if (shown(el) && covering(el)) return true; }
+    return !!document.querySelector("dialog[open]");
+  }
+  function lock(on){
+    if (on === locked) return; locked = on;
+    var s = body.style;
+    if (on){ y = window.scrollY || 0; s.position = "fixed"; s.top = -y + "px"; s.left = "0"; s.right = "0"; s.width = "100%"; html.style.overflow = "hidden"; }
+    else { s.position = ""; s.top = ""; s.left = ""; s.right = ""; s.width = ""; html.style.overflow = ""; window.scrollTo(0, y); }
+  }
+  function check(){ raf = 0; lock(anyOpen()); }
+  function soon(){ if (!raf) raf = requestAnimationFrame(check); }
+  function start(){
+    scan();
+    new MutationObserver(function(list){
+      var add = false, any = false;
+      for (var i = 0; i < list.length; i++){ var m = list[i]; if (m.target === body || m.target === html) continue; any = true; if (m.type === "childList" && m.addedNodes.length) add = true; }
+      if (add){ clearTimeout(scanT); scanT = setTimeout(function(){ scan(); soon(); }, 60); }
+      if (any) soon();
+    }).observe(body, {subtree: true, childList: true, attributes: true, attributeFilter: ["hidden", "class", "style", "open"]});
+    window.addEventListener("resize", soon);
+    soon();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+
+  // свайп «назад / вперед» від краю екрана (iPhone): гасимо дотик біля краю, натискання там лишаються
+  var EDGE = 22, edgeT = null, ex = 0, ey = 0;
+  document.addEventListener("touchstart", function(e){
+    var t = e.touches[0]; edgeT = null;
+    if (!t || e.touches.length > 1 || (t.clientX > EDGE && t.clientX < innerWidth - EDGE)) return;
+    if (e.target.closest && e.target.closest("input,textarea,select,[contenteditable]")) return;
+    e.preventDefault(); edgeT = e.target; ex = t.clientX; ey = t.clientY;
+  }, {passive: false});
+  document.addEventListener("touchend", function(e){
+    if (!edgeT) return; var t = e.changedTouches[0], el = edgeT; edgeT = null;
+    if (t && Math.abs(t.clientX - ex) < 10 && Math.abs(t.clientY - ey) < 10){ var c = el.closest ? (el.closest("a,button,label,[data-i],[role=button],summary") || el) : el; if (c.click) c.click(); }
+  });
+
+  // у застосунку з головного екрана вкладки не складаються в історію — свайпу «назад» нікуди вести
+  var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  if (standalone) document.addEventListener("click", function(e){
+    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a || a.target || a.hasAttribute("download")) return;
+    var u = new URL(a.getAttribute("href"), location.href);
+    if (u.origin !== location.origin || (u.pathname === location.pathname && u.search === location.search && u.hash)) return;
+    e.preventDefault(); location.replace(u.href);
+  });
+})();
+</script>
 </body>
 </html>
