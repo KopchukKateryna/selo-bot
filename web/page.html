@@ -140,6 +140,7 @@ button{font:inherit;cursor:pointer;color:inherit}
     grid-template-columns:minmax(290px,23fr) minmax(0,52fr) minmax(300px,25fr);
     grid-template-rows:auto auto minmax(0,1fr);
     grid-template-areas:"top tools tools" "now sched weather" "stats sched weather"}
+  .wrap:has(.alerts .alert:not([hidden])){grid-template-areas:"top tools tools" "al al al" "now sched weather" "stats sched weather"}
   .top{grid-area:top;text-align:left;margin:0;align-self:center}
   /* перший візит на комп'ютері — вікно посередині екрана */
   .welcome{position:fixed;z-index:15;left:50%;top:50%;transform:translate(-50%,-50%);width:520px;margin:0;padding:26px 26px 22px;
@@ -274,9 +275,28 @@ button{font:inherit;cursor:pointer;color:inherit}
 .welcome[hidden]{display:none !important}
 .alerts{display:contents}
 @media (min-width:1100px){
-  .alerts{display:flex;gap:8px;position:fixed;z-index:6;left:50%;transform:translateX(-50%);bottom:14px;width:max-content}
-  .alerts .alert{margin:0;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+  .alerts{grid-area:al;display:flex;gap:8px}
+  .alerts .alert{margin:0;flex:1 1 0;padding-top:8px;padding-bottom:8px;display:flex;align-items:center}
+  .alerts .alert[hidden]{display:none}
+  .alerts:not(:has(.alert:not([hidden]))){display:none}
+  .wrap:has(.alerts .alert:not([hidden])){grid-template-rows:auto auto auto minmax(0,1fr)}
+  .wrap:has(.alerts .alert:not([hidden])) .dial{max-height:calc(100dvh - 350px)}
+  .updb .btn{min-height:38px}
 }
+.updb{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:color-mix(in srgb,var(--accent) 14%,var(--surface));border:3px solid var(--accent);color:var(--ink);font-weight:700}
+.updb[hidden]{display:none}
+.updb #updt{flex:1 1 220px}
+.updb .ub{display:flex;gap:8px;margin-left:auto}
+.updb .btn{min-height:46px;padding:0 18px;width:auto}
+#sched h2 .chg{display:block;margin-top:4px;font-size:calc(16px*var(--fs));font-weight:600;color:var(--muted)}
+#sched h2 .chg:empty{display:none}
+#sched h2 .chg b{color:var(--ink)}
+.list li.new{position:relative}
+.list .new-b{position:absolute;top:-10px;left:54px;background:var(--accent);color:#fff;border-radius:8px;padding:0 8px;font-size:calc(14px*var(--fs));font-weight:800;line-height:1.5}
+.list li.past .new-b{opacity:1}
+.updb #updok{background:var(--accent);color:#fff;border-color:var(--accent)}
+.list li.new{outline:3px solid var(--accent);outline-offset:-3px;border-radius:14px;border-top-color:transparent;margin-top:8px}
+.list li.new + li{border-top-color:transparent}
 .alert.wxw{background:color-mix(in srgb,#2F7BE0 14%,var(--surface));border-color:color-mix(in srgb,#2F7BE0 45%,transparent)}
 /* черга */
 .grpb{border:2px solid var(--line);background:var(--surface);border-radius:999px;min-height:40px;padding:4px 14px;font-weight:600;color:var(--muted);font-size:inherit;margin-right:6px}
@@ -325,7 +345,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
   .dkb{grid-template-columns:1fr 1fr}
   .dkb .btn:only-child{grid-column:1/-1}
   .dkb .btn:not(:only-child){padding:4px 6px;font-size:calc(15px*var(--fs));line-height:1.15}
-  .alerts{flex-direction:row;flex-wrap:wrap;justify-content:center;max-width:96vw}
+  .alerts{flex-direction:row}
   .dark small{font-size:calc(14px*var(--fs));margin-top:6px}
   .grpb{min-height:32px;padding:2px 12px}
 }
@@ -340,7 +360,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
     <p><button class="grpb" id="grpbtn" type="button" aria-label="Змінити чергу">Черга <b id="grp">6.2</b><i>змінити</i></button><span id="upd">завантаження…</span></p>
   </header>
 
-  <div class="alerts" id="alerts"><p class="alert" id="alert" hidden></p><p class="alert wxw" id="wxwarn" hidden></p></div>
+  <div class="alerts" id="alerts"><div class="alert updb" id="updb" hidden><span id="updt"></span><span class="ub"><button type="button" class="btn sec" id="updshow" hidden>Показати</button><button type="button" class="btn" id="updok">Зрозуміло</button></span></div><p class="alert" id="alert" hidden></p><p class="alert wxw" id="wxwarn" hidden></p></div>
 
 
   <section class="now" id="now" style="--c:var(--muted)">
@@ -353,7 +373,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
   </section>
 
   <section class="card" id="sched">
-    <h2>Графік на добу</h2>
+    <h2>Графік на добу<small class="chg" id="chg"></small></h2>
     <div class="seg" id="seg"><button class="on" data-d="0">Сьогодні</button><button data-d="1">Завтра</button></div>
     <div id="daybox"><svg class="dial" id="dial" viewBox="0 0 440 440" role="img" aria-label="Графік відключень на добу"></svg>
     <div class="legend"><span><i style="background:var(--on)"></i>світло є</span><span><i class="hx" style="background-color:var(--off)"></i>немає</span><span class="mb" id="lgmb" hidden><i style="background:var(--maybe)"></i>можливо</span></div>
@@ -397,7 +417,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
     <button class="tool" id="tourbtn"><span class="ti">?</span><span><em class="lg">Як користуватися</em><em class="sm">Підказки</em><small>Покажу ще раз, крок за кроком</small></span></button>
     <button class="tool" id="bigbtn"><span class="ti">Аа</span><span><em class="lg">Розмір шрифту</em><em class="sm">Шрифт</em><small>Зробити текст більшим чи меншим</small></span></button>
   </section>
-  <p class="foot" id="foot">Графік — із сайту ДТЕК, перевіряється кожні 5 хв. Сяйво показує графік, а не те, чи є світло саме у вас.<br>Погода — модель Open-Meteo. Під час екстрених відключень графік може не діяти.</p>
+  <p class="foot" id="foot">Графік — із сайту ДТЕК, перевіряється щохвилини. Сяйво показує графік, а не те, чи є світло саме у вас.<br>Погода — модель Open-Meteo. Під час екстрених відключень графік може не діяти.</p>
 </div>
 
 <div id="overlay"></div>
@@ -463,9 +483,10 @@ function skyNight(){ return matchMedia("(prefers-color-scheme: dark)").matches ?
 
 function drawDial(){
   var key = DAY ? TOMORROW : TODAY, iv = intervals(key), S = segs(iv), SUN = sunTimes(key), isToday = !DAY;
-  var cx = 220, cy = 220, R = 124, W = 32, SR = R - W / 2 - 26, SW = 20, h = "";
+  // кільце дня/ночі — ЗОВНІ від графіка (як у «Сяйві наших вікон»), підписи годин — за ним
+  var cx = 220, cy = 220, R = 108, W = 32, SW = 16, SR = R + W / 2 + 8 + SW / 2, SO = SR + SW / 2, h = "", LB = "";
   // розмір підписів на колі — разом із розміром шрифту сторінки; при великих — підписано кожну другу годину
-  var K = [1, 1.12, 1.26, 1.42, 1.58][FSI] || 1, KS = Math.min(K, 1.3), PADV = [0, 6, 12, 18, 22][FSI] || 0, PADY = Math.round(PADV / 2), EVEN = FSI >= 2;
+  var K = [1, 1.12, 1.26, 1.42, 1.58][FSI] || 1, KS = Math.min(K, 1.3), PADV = [12, 16, 20, 24, 28][FSI] || 12, PADY = Math.round(PADV / 2), EVEN = FSI >= 2;
   $("dial").setAttribute("viewBox", (-PADV) + " " + (-PADY) + " " + (440 + 2 * PADV) + " " + (440 + 2 * PADY));
   h += '<defs><pattern id="hx" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="8" fill="#fff" fill-opacity=".34"/></pattern></defs>';
   if (!iv){
@@ -474,9 +495,10 @@ function drawDial(){
     h += '<path d="' + arc(cx, cy, R, s[0] + 2, s[1] - 2) + '" stroke="var(--' + s[2] + ')" stroke-width="' + W + '" fill="none"/>';
     if (s[2] === "off") h += '<path d="' + arc(cx, cy, R, s[0] + 2, s[1] - 2) + '" stroke="url(#hx)" stroke-width="' + W + '" fill="none"/>';
     if (s[2] === "on" && s[1] - s[0] >= 90){
-      var mid = (s[0] + s[1]) / 2, low = mid > 360 && mid < 1080, id = "lp" + DAY + "_" + s[0], p1 = pt(cx, cy, R, s[0]), p2 = pt(cx, cy, R, s[1]), lg = (s[1] - s[0]) > 720 ? 1 : 0;
+      // для дуже довгої дуги (цілу добу) підпис кладемо на її середину — інакше початок і кінець збігаються і текст «губиться»
+      var mid = (s[0] + s[1]) / 2, low = mid > 360 && mid < 1080, id = "lp" + DAY + "_" + s[0], la = s[1] - s[0] > 1200 ? mid - 300 : s[0], lb2 = s[1] - s[0] > 1200 ? mid + 300 : s[1], p1 = pt(cx, cy, R, la), p2 = pt(cx, cy, R, lb2), lg = (lb2 - la) > 720 ? 1 : 0;
       var d = low ? "M" + p2[0] + " " + p2[1] + " A" + R + " " + R + " 0 " + lg + " 0 " + p1[0] + " " + p1[1] : "M" + p1[0] + " " + p1[1] + " A" + R + " " + R + " 0 " + lg + " 1 " + p2[0] + " " + p2[1];
-      h += '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="' + ((s[1] - s[0] >= 150 ? 17 : 14) * KS).toFixed(1) + '" font-weight="800" fill="#fff" dominant-baseline="central"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + hrs(Math.round((s[1] - s[0]) / 6) / 10) + '</textPath></text>';
+      LB += '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size=""' + ((s[1] - s[0] >= 150 ? 17 : 14) * KS).toFixed(1) + '" font-weight="800" fill="#fff" dominant-baseline="central"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + hrs(Math.round((s[1] - s[0]) / 6) / 10) + '</textPath></text>';
     }
   });
   // небо: жовта смуга — поки світить сонце, синя — ніч; підписи прямо на смузі
@@ -485,31 +507,41 @@ function drawDial(){
   var d1 = pt(cx, cy, SR, SUN[1] - 30), d2 = pt(cx, cy, SR, SUN[0] + 30), n1 = pt(cx, cy, SR, SUN[1] + 30), n2 = pt(cx, cy, SR, SUN[0] + 1440 - 30);
   h += '<path id="skyday" d="M' + d1[0] + ' ' + d1[1] + ' A' + SR + ' ' + SR + ' 0 0 0 ' + d2[0] + ' ' + d2[1] + '" fill="none"/>' +
        '<path id="skynight" d="M' + n1[0] + ' ' + n1[1] + ' A' + SR + ' ' + SR + ' 0 1 1 ' + n2[0] + ' ' + n2[1] + '" fill="none"/>' +
-       '<text font-size="' + (12.5 * KS).toFixed(1) + '" font-weight="800" fill="#5a3b00" dominant-baseline="central" letter-spacing=".3"><textPath href="#skyday" startOffset="50%" text-anchor="middle">день</textPath></text>' +
-       '<text font-size="' + (12.5 * KS).toFixed(1) + '" font-weight="800" fill="#e6ecff" dominant-baseline="central" letter-spacing=".3"><textPath href="#skynight" startOffset="50%" text-anchor="middle">ніч</textPath></text>';
-  [[SUN[0], "☀"], [SUN[1], "☾"]].forEach(function(z){ var c = pt(cx, cy, SR, z[0]);
-    h += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="13" fill="var(--surface)" stroke="' + (z[1] === "☀" ? "#F0A400" : skyNight()) + '" stroke-width="3"/>' +
-         '<text x="' + c[0] + '" y="' + (c[1] + 6) + '" text-anchor="middle" font-size="16" fill="' + (z[1] === "☀" ? "#E8902E" : "var(--ink)") + '">' + z[1] + '</text>'; });
-  // поділки й години
-  for (var k = 0; k < 48; k++){
-    var mn = k * 30, hr = k % 2 === 0, big = hr && (k / 2) % 6 === 0, o = R + W / 2 + 3, a1 = pt(cx, cy, o, mn), b1 = pt(cx, cy, o + (big ? 13 : hr ? 9 : 5), mn);
-    h += '<line x1="' + a1[0] + '" y1="' + a1[1] + '" x2="' + b1[0] + '" y2="' + b1[1] + '" stroke="var(--muted)" stroke-width="' + (big ? 3 : hr ? 2 : 1.2) + '" stroke-linecap="round"/>';
-    if (hr && !(EVEN && (k / 2) % 2)){ var H = k / 2, fsz = big ? 19 * KS : (EVEN ? 14 : 12.5) * K, t = pt(cx, cy, R + W / 2 + (big ? 20 : 15), mn), ang = (mn / 1440) * 2 * Math.PI, sx = Math.sin(ang), cy2 = -Math.cos(ang),
-      anc = sx > 0.2 ? "start" : sx < -0.2 ? "end" : "middle", dy = fsz * 0.36 + (anc === "middle" ? (cy2 < 0 ? -6 : 10 + (fsz - 12.5) * 0.3) : 0);
-      h += '<text x="' + t[0] + '" y="' + (t[1] + dy) + '" text-anchor="' + anc + '" font-size="' + fsz.toFixed(1) + '" font-weight="' + (big ? 800 : 600) + '" fill="' + (big ? "var(--ink)" : "var(--muted)") + '">' + String(H).padStart(2, "0") + ':00</text>'; }
-  }
+       '<text font-size="' + (11.5 * KS).toFixed(1) + '" font-weight="800" fill="#5a3b00" dominant-baseline="central" letter-spacing=".3"><textPath href="#skyday" startOffset="50%" text-anchor="middle">день</textPath></text>' +
+       '<text font-size="' + (11.5 * KS).toFixed(1) + '" font-weight="800" fill="#e6ecff" dominant-baseline="central" letter-spacing=".3"><textPath href="#skynight" startOffset="50%" text-anchor="middle">ніч</textPath></text>';
+  // минуле сьогодні — притемнене (плавно до поточного часу)
   if (isToday){
     var dimArc = function(a, b, op){ h += '<path d="' + arc(cx, cy, R, a, b) + '" stroke="var(--surface)" stroke-opacity="' + op + '" stroke-width="' + (W + 1) + '" fill="none"/>' ; };
     var ramp = Math.min(60, NOWM); if (NOWM - ramp > 0) dimArc(0, NOWM - ramp, 0.62);
     for (var q2 = 0; q2 < 6; q2++) if (ramp > 0) dimArc(NOWM - ramp + q2 * ramp / 6, NOWM - ramp + (q2 + 1) * ramp / 6, (0.62 * (6 - q2) / 6.5).toFixed(2));
-    var e = pt(cx, cy, R + W / 2 - 2, NOWM);
-    h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + e[0] + '" y2="' + e[1] + '" stroke="var(--ink)" stroke-width="6" stroke-linecap="round"/><circle cx="' + cx + '" cy="' + cy + '" r="9" fill="var(--ink)"/>' +
-         '<text x="' + cx + '" y="' + (cy + 36) + '" text-anchor="middle" font-size="' + (28 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="800" fill="var(--ink)">' + hm(NOWM) + '</text>' +
-         '<text x="' + cx + '" y="' + (cy - 28) + '" text-anchor="middle" font-size="' + (16 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="700" fill="var(--muted)">зараз</text>';
+  }
+  // поділки прямо на «пончику»: кожна година — на всю ширину, кожні пів години — коротка зовні
+  for (var k = 0; k < 48; k++){
+    var mn = k * 30, hr = k % 2 === 0, big = hr && (k / 2) % 6 === 0;
+    var a0 = pt(cx, cy, hr ? R - W / 2 - 1 : R + W / 2 - 11, mn), a2 = pt(cx, cy, R + W / 2 + 1, mn);
+    h += '<line x1="' + a0[0].toFixed(1) + '" y1="' + a0[1].toFixed(1) + '" x2="' + a2[0].toFixed(1) + '" y2="' + a2[1].toFixed(1) + '" stroke="var(--surface)" stroke-width="' + (big ? 3.2 : hr ? 2.2 : 1.6) + '"/>';
+    if (hr){ var o1 = pt(cx, cy, SO + 2, mn), o2 = pt(cx, cy, SO + (big ? 9 : 6), mn);
+      h += '<line x1="' + o1[0].toFixed(1) + '" y1="' + o1[1].toFixed(1) + '" x2="' + o2[0].toFixed(1) + '" y2="' + o2[1].toFixed(1) + '" stroke="var(--muted)" stroke-width="' + (big ? 2.6 : 1.6) + '" stroke-linecap="round"/>'; }
+    if (hr && !(EVEN && (k / 2) % 2)){ var H = k / 2, fsz = big ? 19 * KS : (EVEN ? 14 : 12.5) * K, t = pt(cx, cy, SO + (big ? 16 : 12), mn), ang = (mn / 1440) * 2 * Math.PI, sx = Math.sin(ang), cy2 = -Math.cos(ang),
+      anc = sx > 0.2 ? "start" : sx < -0.2 ? "end" : "middle", dy = fsz * 0.36 + (anc === "middle" ? (cy2 < 0 ? -6 : 10 + (fsz - 12.5) * 0.3) : 0);
+      h += '<text x="' + t[0] + '" y="' + (t[1] + dy) + '" text-anchor="' + anc + '" font-size="' + fsz.toFixed(1) + '" font-weight="' + (big ? 800 : 600) + '" fill="' + (big ? "var(--ink)" : "var(--muted)") + '">' + String(H).padStart(2, "0") + ':00</text>'; }
+  }
+  h += LB; // «3 год» — поверх поділок
+  [[SUN[0], "☀"], [SUN[1], "☾"]].forEach(function(z){ var c = pt(cx, cy, SR, z[0]);
+    h += '<circle cx="' + c[0] + '" cy="' + c[1] + '" r="12" fill="var(--surface)" stroke="' + (z[1] === "☀" ? "#F0A400" : skyNight()) + '" stroke-width="3"/>' +
+         '<text x="' + c[0] + '" y="' + (c[1] + 5.5) + '" text-anchor="middle" font-size="15" fill="' + (z[1] === "☀" ? "#E8902E" : "var(--ink)") + '">' + z[1] + '</text>'; });
+  if (isToday){
+    // поточний час — коротка мітка поперек кільця (не перекриває час у центрі)
+    var e1 = pt(cx, cy, R - W / 2 - 9, NOWM), e2 = pt(cx, cy, R + W / 2 + 3, NOWM);
+    h += '<line x1="' + e1[0].toFixed(1) + '" y1="' + e1[1].toFixed(1) + '" x2="' + e2[0].toFixed(1) + '" y2="' + e2[1].toFixed(1) + '" stroke="var(--surface)" stroke-width="10" stroke-linecap="round"/>' +
+         '<line x1="' + e1[0].toFixed(1) + '" y1="' + e1[1].toFixed(1) + '" x2="' + e2[0].toFixed(1) + '" y2="' + e2[1].toFixed(1) + '" stroke="var(--ink)" stroke-width="5" stroke-linecap="round"/>' +
+         '<circle cx="' + e1[0].toFixed(1) + '" cy="' + e1[1].toFixed(1) + '" r="6" fill="var(--ink)"/>' +
+         '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-size="' + (30 * Math.min(K, 1.12)).toFixed(1) + '" font-weight="800" fill="var(--ink)">' + hm(NOWM) + '</text>' +
+         '<text x="' + cx + '" y="' + (cy - 20) + '" text-anchor="middle" font-size="' + (16 * Math.min(K, 1.12)).toFixed(1) + '" font-weight="700" fill="var(--muted)">зараз</text>';
   } else {
     h += '<text x="' + cx + '" y="' + (cy + 9) + '" text-anchor="middle" font-size="' + (26 * Math.min(K, 1.15)).toFixed(1) + '" font-weight="800" fill="var(--ink)">завтра</text>';
   }
-  if (!iv) h += '<text x="' + cx + '" y="' + (cy + (isToday ? 64 : 40)) + '" text-anchor="middle" font-size="14" font-weight="700" fill="var(--muted)">графіка ще немає</text>';
+  if (!iv) h += '<text x="' + cx + '" y="' + (cy + (isToday ? 46 : 40)) + '" text-anchor="middle" font-size="13" font-weight="700" fill="var(--muted)">графіка ще немає</text>';
   $("dial").innerHTML = h;
   $("sun").innerHTML = '<span><b>☀ ' + hm(SUN[0]) + '</b>схід сонця</span><span><b>☾ ' + hm(SUN[1]) + '</b>захід сонця</span>';
   $("lgmb").hidden = !(iv || []).some(function(o){ return o[2] === "maybe"; });
@@ -521,8 +553,9 @@ function drawDial(){
   } else {
     $("list").innerHTML = S.map(function(s){
       var cur = isToday && NOWM >= s[0] && NOWM < s[1], on = s[2] === "on", past = isToday && s[1] <= NOWM;
-      return '<li class="' + (cur ? "cur" : past ? "past" : "") + '" style="--c:var(--' + s[2] + ')"><span class="m">' + (on ? "💡" : s[2] === "maybe" ? "?" : "✕") + '</span><span class="tm">' + hm(s[0]) + ' – ' + hm(s[1]) + '</span><span class="lb">' +
-        (cur ? '<span class="now-b">зараз</span>' : (on ? "світло" : s[2] === "maybe" ? "можливо" : "немає")) + '</span></li>';
+      var nw = NEWSEG[key] && NEWSEG[key][segKey(s)];
+      return '<li class="' + (cur ? "cur" : past ? "past" : "") + (nw ? " new" : "") + '" style="--c:var(--' + s[2] + ')"><span class="m">' + (on ? "💡" : s[2] === "maybe" ? "?" : "✕") + '</span><span class="tm">' + hm(s[0]) + ' – ' + hm(s[1]) + '</span><span class="lb">' +
+        (nw ? '<span class="new-b">нове</span>' : "") + (cur ? '<span class="now-b">зараз</span>' : (on ? "світло" : s[2] === "maybe" ? "можливо" : "немає")) + '</span></li>';
     }).join("");
   }
 }
@@ -611,7 +644,41 @@ function drawTop(){
   if (!OFFLINE && ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
   $("alert").innerHTML = al.join("<br>"); $("alert").hidden = !al.length;
 }
-function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawNow(); drawTop(); drawDial(); drawStats(); }
+function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawNow(); drawTop(); drawChg(); drawDial(); drawStats(); }
+/* ---------- «ДТЕК змінив графік» ----------
+   Телефон пам'ятає графік, який людина вже бачила (selo:seen:<черга>). Якщо ДТЕК його змінив
+   або з'явився графік на завтра — банер угорі й позначка «нове» біля змінених годин, доки не натиснуть «Зрозуміло». */
+var NEWSEG = {}, CHGCUR = null;
+function segKey(s){ return s[0] + "-" + s[1] + "-" + s[2]; }
+function whenTxt(iso){ if (!iso) return ""; var k = kyiv(new Date(iso)), p = k.date.split("-");
+  return (k.date === TODAY ? "сьогодні" : k.date === addDay(TODAY, -1) ? "учора" : p[2] + "." + p[1]) + " о " + hm(k.min); }
+function drawChg(){
+  NEWSEG = {}; CHGCUR = null;
+  $("chg").innerHTML = ST && ST.changed_at ? "ДТЕК змінив графік <b>" + whenTxt(ST.changed_at) + "</b>" : "";
+  if (!ST || OFFLINE){ $("updb").hidden = true; return; }
+  var cur = {}; [TODAY, TOMORROW].forEach(function(k){ if (ST.days && ST.days[k]) cur[k] = ST.days[k]; });
+  var seen = null; try { seen = JSON.parse(LS.get("selo:seen:" + GRP) || "null"); } catch (e) {}
+  if (!seen || typeof seen !== "object"){ LS.set("selo:seen:" + GRP, JSON.stringify(cur)); $("updb").hidden = true; return; }
+  var msg = [], tomNew = false;
+  [TODAY, TOMORROW].forEach(function(k){
+    if (!cur[k]) return;
+    var was = seen[k];
+    if (was === undefined){ if (k === TOMORROW && Object.keys(seen).length){ msg.push("🆕 З’явився графік на завтра"); tomNew = true; } return; }
+    if (JSON.stringify(was) === JSON.stringify(cur[k])) return;
+    msg.push("🔄 ДТЕК змінив графік на " + (k === TODAY ? "сьогодні" : "завтра"));
+    var old = {}; segs(was).forEach(function(s){ old[segKey(s)] = 1; });
+    NEWSEG[k] = {}; segs(cur[k]).forEach(function(s){ if (!old[segKey(s)]) NEWSEG[k][segKey(s)] = 1; });
+  });
+  if (!msg.length){ $("updb").hidden = true; return; }
+  CHGCUR = cur;
+  $("updt").textContent = msg.join(". ") + (ST.changed_at ? " (" + whenTxt(ST.changed_at) + ")" : "") + (Object.keys(NEWSEG).length ? ". Нові години позначено «нове»." : ".");
+  var onlyTom = tomNew || (NEWSEG[TOMORROW] && !NEWSEG[TODAY]);
+  $("updshow").hidden = !onlyTom || DAY === 1;
+  $("updb").hidden = false;
+}
+$("updok").addEventListener("click", function(){ if (CHGCUR) LS.set("selo:seen:" + GRP, JSON.stringify(CHGCUR)); tick(); });
+$("updshow").addEventListener("click", function(){ var b = document.querySelector('#seg button[data-d="1"]'); if (b) b.click(); $("updshow").hidden = true;
+  var el = $("sched"); if (el && el.scrollIntoView && innerWidth < 1100) el.scrollIntoView({behavior: "smooth", block: "start"}); });
 
 /* ---------- погода ---------- */
 var IC = {
@@ -687,13 +754,14 @@ function load(){
   fetch(q("/api/state?g=" + encodeURIComponent(g)), {cache: "no-store"}).then(function(r){ if (!r.ok) throw 0; return r.json(); })
     .then(function(j){ if (g !== GRP) return; if (!j || !j.ok) throw 0; ST = j; OFFLINE = false; DARKN = j.dark || 0; BACKN = j.back || 0; LS.set("selo:st:" + g, JSON.stringify({at: Date.now(), d: j})); tick(); })
     .catch(function(){ if (g !== GRP) return; var c = cached("selo:st:" + g); if (c){ ST = c.d; CACHEAT = c.at; OFFLINE = true; DARKN = 0; BACKN = 0; tick(); } else { $("upd").textContent = "немає зв’язку"; } });
-  if (LOADN > 1 && LOADN % 10 !== 1 && WX && WX.ok) return;
+  if (LOADN > 1 && LOADN % 30 !== 1 && WX && WX.ok) return;
   fetch(q("/api/weather"), {cache: "no-store"}).then(function(r){ return r.json(); }).then(function(j){ WX = j; if (j && j.ok) LS.set("selo:wx", JSON.stringify({at: Date.now(), d: j})); drawWx(); })
     .catch(function(){ var c = cached("selo:wx", 3 * 3600e3); WX = c ? c.d : null; drawWx(); });
 }
-document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - LAST > 60000) load(); });
+document.addEventListener("visibilitychange", function(){ if (!document.hidden && Date.now() - LAST > 15000) load(); });
+addEventListener("pageshow", function(e){ if (e.persisted) load(); });
 setInterval(function(){ if (ST) tick(); }, 30000);
-setInterval(function(){ if (!document.hidden) load(); }, 60000);
+setInterval(function(){ if (!document.hidden) load(); }, 20000);
 
 $("seg").addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; DAY = +b.getAttribute("data-d");
   [].forEach.call($("seg").children, function(x){ x.classList.toggle("on", x === b); }); drawDial(); });
@@ -724,17 +792,19 @@ $("bigbtn").addEventListener("click", function(){ hello(false); });
 /* ---------- тур ---------- */
 var TOUR = 0;
 function R_(id, pad){ var r = $(id).getBoundingClientRect(); pad = pad || 8; return {t: "r", x: r.left - pad, y: r.top - pad, w: r.width + 2 * pad, h: r.height + 2 * pad}; }
-function C_(rad){ var r = $("dial").getBoundingClientRect(), k = Math.min(r.width, r.height) / 440, ox = r.left + (r.width - 440 * k) / 2, oy = r.top + (r.height - 440 * k) / 2;
+function C_(rad){ var el = $("dial"), r = el.getBoundingClientRect(), vb = el.viewBox && el.viewBox.baseVal && el.viewBox.baseVal.width ? el.viewBox.baseVal : {x: 0, y: 0, width: 440, height: 440};
+  // з урахуванням полів навколо кола (viewBox ширший за 440, коли шрифт більший)
+  var k = Math.min(r.width / vb.width, r.height / vb.height), ox = r.left + (r.width - vb.width * k) / 2 - vb.x * k, oy = r.top + (r.height - vb.height * k) / 2 - vb.y * k;
   return {t: "c", cx: ox + 220 * k, cy: oy + 220 * k, r: rad * k}; }
 function A_(ri, ro){ var c = C_(1); return {t: "a", cx: c.cx, cy: c.cy, ri: ri * c.r, ro: ro * c.r, r: ro * c.r}; }
 function ROWS(k){ var l = $("list"), n = Math.min(k, l.children.length), f = l.children[0].getBoundingClientRect(), z = l.children[n - 1].getBoundingClientRect();
   return {t: "r", x: f.left - 8, y: f.top - 8, w: f.width + 16, h: z.bottom - f.top + 16}; }
 var STEPS = [
   ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: за графіком є світло чи немає, і коли зміниться. Червона рамка — немає, зелена — є. Якщо світло зникло не за графіком — натисніть «У мене світла немає», сусіди це побачать. Коли дадуть — «Світло з’явилось»."],
-  ["dial", function(){ return [A_(103, 145), C_(58)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне заштриховане — немає. Стрілка — котра зараз година. Те, що вже минуло, притемнене."],
-  ["dial", function(){ return [A_(68, 96), R_("sun", 6)]; }, "Сонце: день і ніч", "Кільце всередині: жовте «день» — поки світить сонце, синє «ніч» — темно. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках."],
+  ["dial", function(){ return [A_(86, 128), C_(56)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне заштриховане — немає. Риски на колі — кожна година, короткі — пів години. Темна риска з крапкою — котра зараз година. Те, що вже минуло, притемнене."],
+  ["dial", function(){ return [A_(128, 152), R_("sun", 6)]; }, "Сонце: день і ніч", "Кільце навколо: жовте «день» — поки світить сонце, синє «ніч» — темно. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках."],
   ["seg", function(){ return [R_("seg", 6)]; }, "Сьогодні і завтра", "Натисніть «Завтра», щоб побачити графік на завтра. «Сьогодні» — повернутися."],
-  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "💡 — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз»."],
+  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "💡 — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз». Якщо ДТЕК змінив графік — угорі з’явиться синє повідомлення, а нові години будуть позначені «нове»."],
   ["weather", function(){ return [R_("wxtop")]; }, "Погода", "Температура зараз, чи буде дощ або сніг і до котрої години, погода на найближчі години. Нижче — прогноз на 3 дні."],
   ["stats", function(){ return [R_("statnums")]; }, "Скільки без світла", "Скільки годин без світла за графіком сьогодні, завтра і за останній тиждень."],
   ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Надіслати графік картинкою рідним чи сусідам, додати Сяйво на екран телефона, ще раз подивитися цей тур або змінити розмір шрифту."]];

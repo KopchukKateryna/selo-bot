@@ -58,8 +58,21 @@ async function lastCheck(env, s) {
   try { const db = await sdb(env); const r = db && await db.prepare("SELECT v FROM meta WHERE k = 'checked'").first(); if (r && r.v && (!t || r.v > t)) t = r.v; } catch (e) {}
   return t;
 }
+// стан графіка: основна копія — у базі D1 (однакова одразу в усіх дата-центрах Cloudflare),
+// запасна — у KV (KV між дата-центрами доходить із запізненням до хвилини)
 async function readState(env) {
+  try {
+    const db = await sdb(env);
+    const r = db && await db.prepare("SELECT v FROM meta WHERE k = 'state'").first();
+    if (r && r.v) return JSON.parse(r.v);
+  } catch (e) { console.log("state read (D1)", String(e)); }
   return (await env.STATE.get("state", "json")) || {days: {}, hist: {}, notice: null, outage: null};
+}
+async function saveState(env, st) {
+  const txt = JSON.stringify(st);
+  try { const db = await sdb(env); if (db) await db.prepare("INSERT INTO meta (k, v) VALUES ('state', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v").bind(txt).run(); }
+  catch (e) { console.log("state write (D1)", String(e)); }
+  await env.STATE.put("state", txt);
 }
 const GH_ISS = "https://token.actions.githubusercontent.com";
 let JWKS = null, JWKS_AT = 0;
@@ -89,6 +102,12 @@ async function ingest(req, env) {
   try { body = await req.json(); } catch (e) { return json({ok: false, error: "bad json"}, 400); }
   const prev = await readState(env);
   const now = new Date(), today = kyivDate(now);
+  if (body.notice_only) {
+    if (!body.notice || typeof body.notice !== "object") return json({ok: false, error: "no notice"}, 400);
+    if (JSON.stringify(prev.notice || null) === JSON.stringify(body.notice)) return json({ok: true, written: false});
+    await saveState(env, {...prev, notice: body.notice, updated_at: now.toISOString(), writtenAt: now.toISOString()});
+    return json({ok: true, written: true, changed: true});
+  }
   const next = {...prev};
   if (body.ok && body.days && typeof body.days === "object") {
     const norm = (src, old) => {
@@ -124,6 +143,11 @@ async function ingest(req, env) {
       }
       next.g = g;
     }
+    const pair = d => JSON.stringify([(d || {})[today] || null, (d || {})[addDay(today, 1)] || null]);
+    const chg = {...(prev.chg || {})}, mainG = next.group || "6.2";
+    if (pair(prev.days) !== pair(next.days)) chg[mainG] = now.toISOString();
+    for (const [name, v] of Object.entries(next.g || {})) if (pair(((prev.g || {})[name] || {}).days) !== pair(v.days)) chg[name] = now.toISOString();
+    next.chg = chg;
     next.err = null;
     next.checked_at = now.toISOString();
   } else {
@@ -137,7 +161,7 @@ async function ingest(req, env) {
   if (changed || (body.ok && stale)) {
     next.writtenAt = now.toISOString();
     if (changed) next.updated_at = now.toISOString();
-    await env.STATE.put("state", JSON.stringify(next));
+    await saveState(env, next);
     return json({ok: true, written: true, changed});
   }
   return json({ok: true, written: false});
@@ -152,7 +176,7 @@ async function apiState(env, g) {
   for (const [k, v] of Object.entries(src.days || {})) if (k >= today) days[k] = v;
   const dk = await darkCount(env);
   return {ok: true, group, days, notice: s.notice || null, outage: s.outage || null,
-    hist: src.hist || {}, checked_at: await lastCheck(env, s), updated_at: s.updated_at || null, err: s.err || null, dark: dk.n, back: dk.b};
+    hist: src.hist || {}, checked_at: await lastCheck(env, s), updated_at: s.updated_at || null, changed_at: (s.chg || {})[group] || null, err: s.err || null, dark: dk.n, back: dk.b};
 }
 // «У мене світла немає» / «світло з'явилось»: один запис на браузер (анонімний номер).
 // st = 1 — світла немає (діє 2 години), st = 0 — світло з'явилось (рахуємо за останню годину)
@@ -354,7 +378,7 @@ export default {
         const hit = await cache.match(key);
         if (hit) return new Response(hit.body, {headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
         const body = JSON.stringify(await apiState(env, g));
-        ctx.waitUntil(cache.put(key, new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=60"}})));
+        ctx.waitUntil(cache.put(key, new Response(body, {headers: {"content-type": "application/json", "cache-control": "public, max-age=10"}})));
         return new Response(body, {headers: {"content-type": "application/json; charset=utf-8", "cache-control": "no-store"}});
       }
       if (p === "/api/dark" && req.method === "POST") {

@@ -1,6 +1,7 @@
 """Скрапер «Сяйва Наливайківки» (тест): графік ДТЕК для черги села -> окремий Worker (/ingest).
 
-Запускається в GitHub Actions кожні ~10 хв. Адреса — будь-який будинок черги 6.2 (задається у файлі запуску).
+Запускається в GitHub Actions щохвилини: `python scrape.py` — лише графік (швидко, одразу в Worker),
+`python scrape.py notice` — лише оголошення ДТЕК (через браузер, раз на 5 хв окремо, щоб не затримувати графік). Адреса — будь-який будинок черги 6.2 (задається у файлі запуску).
 Ключа немає: Worker перевіряє «посвідчення» (OIDC), яке GitHub видає кожному запуску цього репозиторію.
 Логіка звернення до ДТЕК — та сама, що в перевіреному скрапері «Сяйва наших вікон».
 """
@@ -289,14 +290,20 @@ async def main() -> None:
     except Exception as e:  # noqa: BLE001
         payload = {"ok": False, "error": f"{type(e).__name__}: {e}"[:300]}
         print("Помилка:", payload["error"], file=sys.stderr)
-    if payload.get("ok"):
-        try:
-            payload["notice"] = await asyncio.wait_for(fetch_notice(), timeout=90)
-            print("Оголошення ДТЕК:", json.dumps(payload["notice"], ensure_ascii=False)[:300])
-        except Exception as e:  # noqa: BLE001
-            print("Оголошення ДТЕК не прочитано:", type(e).__name__, e, file=sys.stderr)
     post(payload)
 
 
+async def main_notice() -> None:
+    """Лише оголошення ДТЕК («Шановні клієнти!») — окремим запуском, щоб графік не чекав браузера."""
+    try:
+        notice = await asyncio.wait_for(fetch_notice(), timeout=90)
+    except Exception as e:  # noqa: BLE001
+        print("Оголошення ДТЕК не прочитано:", type(e).__name__, e, file=sys.stderr)
+        return
+    print("Оголошення ДТЕК:", json.dumps(notice, ensure_ascii=False)[:300])
+    if notice is not None:
+        post({"notice_only": True, "notice": notice})
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main_notice() if sys.argv[1:] == ["notice"] else main())
