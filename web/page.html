@@ -74,6 +74,9 @@ button{font:inherit;cursor:pointer;color:inherit}
 .list{margin:12px 0 0;padding:0;list-style:none}
 .list li{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:2px solid var(--line);font-size:calc(22px*var(--fs))}
 .list li:first-child{border-top:0}
+/* вузький телефон із великим шрифтом: підпис «світло / немає / зараз» переходить на новий рядок, а не вилазить за екран */
+.list li{flex-wrap:wrap;row-gap:4px}
+@media (max-width:400px){ .stat b{font-size:calc(24px*var(--fs));overflow-wrap:break-word} .list li{gap:10px} }
 .list li.past{opacity:.45}
 .list .m{width:36px;height:36px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;
   background:color-mix(in srgb,var(--c) 18%,var(--surface));color:var(--c);font-size:calc(20px*var(--fs))}
@@ -84,7 +87,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 .list li.cur{background:color-mix(in srgb,var(--c) 10%,var(--surface));border-radius:14px;border-top-color:transparent}
 .list li.cur + li{border-top-color:transparent}
 
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stats{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
 .stat{background:var(--bg);border-radius:16px;padding:12px 14px}
 .stat span{display:block;color:var(--muted);font-size:calc(16px*var(--fs));font-weight:600}
 .stat b{font-size:calc(28px*var(--fs));font-weight:800;font-variant-numeric:tabular-nums}
@@ -213,17 +216,27 @@ button{font:inherit;cursor:pointer;color:inherit}
 .hole{position:absolute;border-radius:24px;box-shadow:0 0 0 4px #FFD54A,0 0 0 9999px rgba(5,10,18,.72)}
 .tip{position:absolute;left:14px;right:14px;z-index:21;background:var(--surface);color:var(--ink);border-radius:22px;padding:18px;
   box-shadow:0 10px 30px rgba(0,0,0,.4)}
-.tip .stp{color:var(--accent);font-weight:800;font-size:calc(16px*var(--fs))}
-.tip h3{margin:4px 0 6px;font-size:calc(24px*var(--fs))}
-.tip p{margin:0 0 14px;font-size:calc(20px*var(--fs))}
-.tip .row{display:flex;gap:10px}
+.tip .stp{color:var(--accent);font-weight:800;font-size:calc(16px*min(var(--fs),1.15))}
+.tip h3{margin:4px 0 6px;font-size:calc(24px*min(var(--fs),1.15))}
+.tip p{margin:0 0 14px;font-size:calc(20px*min(var(--fs),1.15))}
+.tip .row{display:flex;gap:10px;flex:none}
+/* телефон: підказка туру закріплена внизу екрана, над панеллю браузера; довгий текст прокручується, кнопки завжди видно */
+:root{--bar:0px}
+html.iosbar{--bar:80px}
+.tip.mob{position:fixed;top:auto;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom) + var(--bar));display:flex;flex-direction:column;padding:16px}
+.tip.mob p{overflow:auto;min-height:0;flex:1 1 auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.tip.mob .btn{min-height:54px;white-space:nowrap;padding:0 12px}
+.tip .row .btn{flex:1 1 0}
+.tip.mob p.more{-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent);margin-bottom:4px}
+.tip .mh{flex:none;text-align:center;color:var(--accent);font-weight:700;font-size:calc(15px*min(var(--fs),1.15));margin:0 0 10px}
+.tip .mh[hidden]{display:none}
 .dots{display:flex;gap:6px;margin-bottom:10px}
 .dots i{width:10px;height:10px;border-radius:50%;background:var(--line)}
 .dots i.on{background:var(--accent);width:26px;border-radius:5px}
 
 /* додати на екран */
 .sheet{position:fixed;inset:0;z-index:30;background:rgba(5,10,18,.6);display:flex;align-items:flex-end}
-.sh{width:100%;max-height:96vh;overflow:auto;background:var(--surface);border-radius:26px 26px 0 0;padding:16px 18px 26px}
+.sh{width:100%;max-height:96vh;max-height:calc(100dvh - 8px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:26px 26px 0 0;padding:16px 18px calc(26px + env(safe-area-inset-bottom) + var(--bar))}
 .sh h3{margin:2px 0 4px;font-size:calc(26px*var(--fs))}
 .sh p{margin:0 0 14px;color:var(--muted);font-size:calc(19px*var(--fs))}
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
@@ -250,7 +263,7 @@ button{font:inherit;cursor:pointer;color:inherit}
 }
 /* вітальне вікно і розмір шрифту */
 .hello{position:fixed;inset:0;z-index:40;background:rgba(4,8,15,.6);display:flex;align-items:flex-end;justify-content:center}
-.hello .box{width:100%;max-width:560px;max-height:94vh;overflow:auto;background:var(--surface);border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom))}
+.hello .box{width:100%;max-width:560px;max-height:94vh;max-height:calc(100dvh - 8px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom) + var(--bar))}
 @media (min-width:700px){ .hello{align-items:center} .hello .box{border-radius:26px} }
 .hello h3{margin:0 0 8px;font-size:calc(26px*var(--fs));line-height:1.2}
 .hello p{margin:0 0 12px;font-size:calc(19px*var(--fs));color:var(--muted)}
@@ -424,6 +437,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 
 <script>
 "use strict";
+(function(){ var ua = navigator.userAgent, sa = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+  if (/iPhone|iPod/.test(ua) && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Viber|Telegram|FBAN|FBAV|Instagram|Line\//.test(ua) && !sa) document.documentElement.classList.add("iosbar"); })();
 var LAT = 50.476, LON = 29.70;
 var ST = null, WX = null, DAY = 0, NOWM = 0, TODAY = "", TOMORROW = "";
 var GROUPS = ["6.2", "5.1", "5.2", "1.1"], GRP = "6.2", OFFLINE = false, CACHEAT = 0, DARKN = 0, BACKN = 0, CUR = null, DARKERR = false;
@@ -816,7 +831,7 @@ function smoothTo(y, cb){
     window.scrollTo(0, y0 + dy * e); if (k < 1) requestAnimationFrame(step); else cb(); }
   requestAnimationFrame(step);
 }
-function stopScroll(e){ if (TOUR){ e.preventDefault(); } }
+function stopScroll(e){ if (TOUR && !(e.target && e.target.closest && e.target.closest(".tip.mob p"))){ e.preventDefault(); } }
 addEventListener("wheel", stopScroll, {passive: false});
 addEventListener("touchmove", stopScroll, {passive: false});
 addEventListener("keydown", function(e){ if (TOUR && ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].indexOf(e.key) >= 0) e.preventDefault(); });
@@ -859,13 +874,24 @@ function drawTour(n){
     var tw = 380, x = rgt + 20 + tw < W_ ? rgt + 20 : Math.max(12, lft - 20 - tw), y = Math.max(sy + 12, Math.min(sy + VH - 330, top));
     pos = "left:" + x + "px;right:auto;top:" + y + "px;width:" + tw + "px";
   } else {
-    // підказка під підсвіченим, якщо влазить на екран; інакше над ним; інакше внизу екрана
-    var below = (sy + VH) - bot > 300, above = top - sy > 300;
-    pos = below ? "top:" + (bot + 16) + "px" : above ? "top:" + (top - 16) + "px;transform:translateY(-100%)" : "top:" + (sy + VH - 16) + "px;transform:translateY(-100%)";
-    arrow = below ? '<i class="arr up"></i>' : above ? '<i class="arr down"></i>' : "";
+    // телефон: підказка закріплена внизу екрана (над панеллю браузера), висота — не більше 55% екрана
+    // (менше 60%, щоб захист «під вікном сторінка не прокручується» не сприймав підказку за вікно)
+    var vvh = Math.min(VH, window.visualViewport ? window.visualViewport.height : VH);
+    pos = "max-height:" + Math.floor(vvh * 0.55) + "px";
   }
-  ov.innerHTML = svg + '<div class="tip" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
+  ov.innerHTML = svg + '<div class="tip' + (DESK() ? "" : " mob") + '" style="' + pos + '">' + arrow + '<div class="dots">' + STEPS.map(function(_, i){ return '<i class="' + (i === n - 1 ? "on" : "") + '"></i>'; }).join("") + '</div>' +
     '<div class="stp">Крок ' + n + ' з ' + STEPS.length + '</div><h3>' + S[2] + '</h3><p>' + S[3] + '</p><div class="row"><button class="btn sec" data-t="' + (n > 1 ? n - 1 : 0) + '">' + (n > 1 ? "← Назад" : "Пропустити") + '</button><button class="btn pri" data-t="' + (n < STEPS.length ? n + 1 : 0) + '">' + (n < STEPS.length ? "Далі →" : "Зрозуміло ✓") + '</button></div></div>';
+  if (!DESK()){
+    // якщо підсвічене ховається під підказкою, а вміщається над нею — трохи підкрутити сторінку
+    // текст не вміщається — згасання внизу й підказка «гортайте»; дочитали до кінця — прибираємо
+    var tipEl = ov.querySelector(".tip"), tpP = tipEl.querySelector("p");
+    if (tpP && tpP.scrollHeight > tpP.clientHeight + 4){
+      tpP.classList.add("more"); var mh = document.createElement("div"); mh.className = "mh"; mh.textContent = "↓ гортайте текст"; tpP.after(mh);
+      tpP.addEventListener("scroll", function(){ var end = tpP.scrollTop + tpP.clientHeight >= tpP.scrollHeight - 4; tpP.classList.toggle("more", !end); mh.hidden = end; }, {passive: true});
+    }
+    var tp = tipEl.getBoundingClientRect().top, hb = bot - sy, ht = top - sy;
+    if (hb > tp - 10 && bot - top <= tp - 22) window.scrollTo(0, sy + Math.min(ht - 10, hb - (tp - 12)));
+  }
 }
 $("overlay").addEventListener("click", function(e){ var b = e.target.closest("[data-t]"); if (b){ if (TOUR === STEPS.length && +b.getAttribute("data-t") === 0) sendHit("tour"); return tour(+b.getAttribute("data-t")); }
   var f = e.target.closest("[data-fs]"); if (f) return setFs(FSI + (+f.getAttribute("data-fs")));
