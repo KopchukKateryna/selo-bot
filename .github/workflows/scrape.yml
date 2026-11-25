@@ -55,7 +55,7 @@ jobs:
           done
           wait || true
         env:
-          WORKER_URL: https://selo-bot.kopchuk-maksym.workers.dev
+          WORKER_URL: "https://selo-bot.kopchuk-maksym.workers.dev,https://svitlo.selo-nalyvaykivka.workers.dev"
           DTEK_SITE: krem
           CITY: с. Наливайківка
           STREET: вул. Центральна
