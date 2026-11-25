@@ -206,6 +206,7 @@ button{font:inherit;cursor:pointer;color:inherit}
   .sun span{padding:7px 6px}
   .dial{max-height:calc(100vh - 250px);max-height:calc(100dvh - 250px)}
 }
+header.top h1{-webkit-user-select:none;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 /* тур */
 .tourbg{position:absolute;left:0;top:0;z-index:20;pointer-events:none;touch-action:none}
 .tip{transition:opacity .25s}
@@ -1001,10 +1002,22 @@ var UID = LS.get("selo:uid");
 if (!UID){ UID = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2))).toLowerCase(); LS.set("selo:uid", UID); }
 var DEV = IOS ? "ios" : AND ? "android" : (matchMedia("(pointer:fine)").matches ? "desktop" : "other"), LASTOPEN = 0, FSTIMER = 0;
 function sendHit(ev){
-  try { var body = JSON.stringify({uid: UID, ev: ev, sa: STANDALONE ? 1 : 0, dev: DEV, fs: FSI});
+  try { var o = {uid: UID, ev: ev, sa: STANDALONE ? 1 : 0, dev: DEV, fs: FSI}; if (LS.get("selo:me") === "1") o.me = 1; var body = JSON.stringify(o);
     if (navigator.sendBeacon) navigator.sendBeacon(q("/api/hit"), new Blob([body], {type: "application/json"}));
     else fetch(q("/api/hit"), {method: "POST", body: body, headers: {"content-type": "application/json"}, keepalive: true}); } catch (e) {}
 }
+/* «не рахувати цей телефон»: 5 швидких торкань заголовка */
+(function(){ var n = 0, t = 0;
+  document.querySelector("header.top h1").addEventListener("click", function(){
+    var now = Date.now(); n = now - t < 700 ? n + 1 : 1; t = now; if (n < 5) return; n = 0;
+    var me = LS.get("selo:me") === "1";
+    sheetBox(me ? '<h3>Цей телефон не рахується</h3><p>Ваші відкриття не потрапляють у статистику Сяйва. Знову рахувати?</p><button class="btn pri" id="meoff" style="width:100%">Так, знову рахувати</button>'
+      : '<h3>Не рахувати цей телефон у статистиці?</h3><p>Ваші відкриття більше не потраплятимуть у статистику, а старі — приберуться. Графік і все інше працює як завжди.</p><button class="btn pri" id="meon" style="width:100%">Так, не рахувати</button>');
+  });
+  $("overlay").addEventListener("click", function(e){
+    if (e.target.id === "meon"){ LS.set("selo:me", "1"); sendHit("open"); sheetBox('<h3>✓ Готово</h3><p>Цей телефон більше не рахується у статистиці.</p>'); }
+    if (e.target.id === "meoff"){ LS.set("selo:me", "0"); closeSheet(); }
+  }); })();
 function opened(){ if (Date.now() - LASTOPEN > 30 * 60000){ LASTOPEN = Date.now(); sendHit("open"); } }
 document.addEventListener("visibilitychange", function(){ if (!document.hidden) opened(); });
 
