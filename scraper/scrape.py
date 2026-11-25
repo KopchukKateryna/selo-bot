@@ -21,7 +21,8 @@ SITE = os.getenv("DTEK_SITE", "krem")
 CITY = os.environ["CITY"]
 STREET = os.environ["STREET"]
 HOUSE = os.environ["HOUSE"]
-WORKER_URL = os.environ["WORKER_URL"].rstrip("/")
+# одна або кілька адрес Worker-а через кому (на час переїзду — стара й нова)
+WORKER_URLS = [u.strip().rstrip("/") for u in os.environ["WORKER_URL"].split(",") if u.strip()]
 INGEST_TOKEN = os.getenv("INGEST_TOKEN", "")
 # інші черги села (напр. "5.1,5.2,1.1"): ДТЕК віддає графіки всіх черг тим самим запитом
 EXTRA_GROUPS = [g.strip() for g in os.getenv("EXTRA_GROUPS", "").split(",") if g.strip()]
@@ -248,14 +249,25 @@ def auth_token() -> str:
 
 
 def post(payload: dict) -> None:
-    req = urllib.request.Request(
-        f"{WORKER_URL}/ingest",
-        data=json.dumps(payload).encode(),
-        headers={"Authorization": f"Bearer {auth_token()}", "Content-Type": "application/json", "User-Agent": "selo-scraper/1.0"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        print("Worker:", r.status, r.read().decode()[:200])
+    """Шле дані на кожну адресу по черзі; збій однієї не заважає іншим."""
+    data = json.dumps(payload).encode()
+    token = auth_token()
+    errors = []
+    for base in WORKER_URLS:
+        req = urllib.request.Request(
+            f"{base}/ingest",
+            data=data,
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json", "User-Agent": "selo-scraper/1.0"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                print("Worker", base, ":", r.status, r.read().decode()[:200])
+        except Exception as e:  # noqa: BLE001
+            print("Worker", base, ": помилка", type(e).__name__, e, file=sys.stderr)
+            errors.append(base)
+    if errors and len(errors) == len(WORKER_URLS):
+        raise RuntimeError("жодна адреса Worker-а не прийняла дані")
 
 
 async def main() -> None:
