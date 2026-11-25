@@ -5,6 +5,37 @@ async function asset(env, name, type) {
   if (!r.ok) throw new Error("asset " + name + " " + r.status);
   return type === "text" ? r.text() : r.arrayBuffer();
 }
+// тестова версія сторінки (/dev) — з гілки dev, кеш 30 с
+const ASSETS_DEV = "https://raw.githubusercontent.com/KopchukKateryna/selo-bot/dev/web/";
+async function devPage() {
+  const r = await fetch(ASSETS_DEV + "page.html", {cf: {cacheTtl: 30, cacheEverything: true}});
+  if (!r.ok) throw new Error("dev page " + r.status);
+  const t = await r.text();
+  const badge = '<div style="position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 2px);transform:translateX(-50%);z-index:99;background:#E8A317;color:#111;font:800 12px system-ui;padding:3px 10px;border-radius:9px;pointer-events:none">ТЕСТОВА ВЕРСІЯ</div>';
+  return t.replace(/<body([^>]*)>/, "<body$1>" + badge).replace('<meta name="viewport"', '<meta name="robots" content="noindex"><meta name="viewport"');
+}
+// перевірка: чи пускає ДТЕК запити прямо з Cloudflare (лише читання, з ключем статистики)
+async function dtekTest() {
+  const base = "https://www.dtek-krem.com.ua", out = {}, t0 = Date.now();
+  const H = {"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36", "accept-language": "uk,en;q=0.9"};
+  try {
+    const r = await fetch(base + "/ua/shutdowns", {headers: {...H, accept: "text/html"}, redirect: "manual"});
+    const html = await r.text();
+    const csrf = (html.match(/<meta name="csrf-token" content="([^"]+)"/) || [])[1] || "";
+    const ck = [];
+    for (const [k, v] of r.headers) if (k === "set-cookie") ck.push(v.split(";")[0]);
+    out.page = {status: r.status, ms: Date.now() - t0, len: html.length, csrf: !!csrf, cookies: ck.map(c => c.split("=")[0]), incapsula: /incapsula|_Incapsula_Resource|Request unsuccessful/i.test(html), title: (html.match(/<title>([^<]*)/) || [])[1] || ""};
+    if (csrf) {
+      const t1 = Date.now();
+      const body = new URLSearchParams({"method": "getHomeNum", "data[0][name]": "city", "data[0][value]": "с. Наливайківка", "data[1][name]": "street", "data[1][value]": "вул. Центральна"});
+      const a = await fetch(base + "/ua/ajax", {method: "POST", body, headers: {...H, accept: "application/json, text/javascript, */*; q=0.01", "content-type": "application/x-www-form-urlencoded; charset=UTF-8",
+        "x-requested-with": "XMLHttpRequest", "x-csrf-token": csrf, origin: base, referer: base + "/ua/shutdowns", cookie: ck.join("; ")}});
+      const at = await a.text(); let j = null; try { j = JSON.parse(at); } catch (e) {}
+      out.ajax = {status: a.status, ms: Date.now() - t1, json: !!j, keys: j ? Object.keys(j).slice(0, 12) : [], house1: !!(j && j.data && j.data["1"]), group: j && j.data && j.data["1"] ? j.data["1"].sub_type_reason : null, hasFact: !!(j && j.fact), snippet: j ? "" : at.slice(0, 200)};
+    }
+  } catch (e) { out.error = String(e && e.message || e); }
+  return out;
+}
 let LASTPAGE = null;
 const PAGE_BACKUP = "https://selo-bot.backup/page.html";
 async function pageHtml(env, ctx) {
@@ -257,6 +288,7 @@ async function hit(req, env) {
   const uid = String(b.uid || ""), ev = String(b.ev || "");
   if (!/^[a-z0-9-]{8,40}$/.test(uid) || ["open", "tour", "font", "share"].indexOf(ev) < 0) return new Response(null, {status: 204});
   if (/bot|crawl|spider|preview/i.test(req.headers.get("user-agent") || "")) return new Response(null, {status: 204});
+  try { if (new URL(req.headers.get("referer") || "https://x/").pathname.startsWith("/dev")) return new Response(null, {status: 204}); } catch (e) {}
   const dev = ["ios", "android", "desktop"].indexOf(b.dev) >= 0 ? b.dev : "other";
   const db = await sdb(env); if (!db) return new Response(null, {status: 204});
   const now = new Date();
@@ -362,6 +394,11 @@ export default {
         if (p === "/api/stats") return json(await apiStats(env), 200, hd);
         return new Response(STATS_PAGE, {headers: {...hd, "content-type": "text/html; charset=utf-8"}});
       }
+      if (p === "/dtek-test") {
+        const sa = statsAccess(req, env, url);
+        if (!sa.ok) return new Response("Немає доступу", {status: 403});
+        return json(await dtekTest());
+      }
       if (p === "/health") { const s = await readState(env); return json({ok: true, checked_at: await lastCheck(env, s), updated_at: s.updated_at || null, err: s.err || null, days: Object.keys(s.days || {})}); }
       const IMG = {"/icon-180.png": "icon-180.png", "/apple-touch-icon.png": "icon-180.png", "/apple-touch-icon-precomposed.png": "icon-180.png",
         "/icon-192.png": "icon-192.png", "/icon-512.png": "icon-512.png", "/favicon.ico": "icon-192.png"};
@@ -400,6 +437,12 @@ export default {
         catch (e) { return new Response("<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><p style='font:20px system-ui;padding:24px'>Сяйво тимчасово недоступне. Спробуйте за хвилину.</p>", {status: 503, headers: {"content-type": "text/html; charset=utf-8"}}); }
         const html = page.split("/*KQ*/").join(a.k ? "?k=" + encodeURIComponent(a.k) : "");
         return new Response(html, {headers});
+      }
+      if (p === "/dev" || p === "/dev/") {
+        try {
+          const html = (await devPage()).split("/*KQ*/").join(a.k ? "?k=" + encodeURIComponent(a.k) : "");
+          return new Response(html, {headers: {"content-type": "text/html; charset=utf-8", "cache-control": "no-store", "x-robots-tag": "noindex"}});
+        } catch (e) { return new Response("Тестова версія недоступна: " + String(e.message || e), {status: 502, headers: {"content-type": "text/plain; charset=utf-8"}}); }
       }
       return new Response("Не знайдено", {status: 404});
     } catch (e) {
