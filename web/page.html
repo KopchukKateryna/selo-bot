@@ -228,6 +228,8 @@ html.iosbar{--bar:80px}
 .tip.mob .btn{min-height:54px;white-space:nowrap;padding:0 12px}
 .tip .row .btn{flex:1 1 0}
 .tip.mob p.more{-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent);margin-bottom:4px}
+.tip.mob p.up{-webkit-mask-image:linear-gradient(transparent,#000 25%);mask-image:linear-gradient(transparent,#000 25%)}
+.tip.mob p.up.more{-webkit-mask-image:linear-gradient(transparent,#000 25%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 25%,#000 70%,transparent)}
 .tip .mh{flex:none;text-align:center;color:var(--accent);font-weight:700;font-size:calc(15px*min(var(--fs),1.15));margin:0 0 10px}
 .tip .mh[hidden]{display:none}
 .dots{display:flex;gap:6px;margin-bottom:10px}
@@ -236,7 +238,14 @@ html.iosbar{--bar:80px}
 
 /* додати на екран */
 .sheet{position:fixed;inset:0;z-index:30;background:rgba(5,10,18,.6);display:flex;align-items:flex-end}
-.sh{width:100%;max-height:96vh;max-height:calc(100dvh - 8px);overflow:auto;overscroll-behavior:contain;background:var(--surface);border-radius:26px 26px 0 0;padding:16px 18px calc(26px + env(safe-area-inset-bottom) + var(--bar))}
+.sh{width:100%;max-height:96vh;max-height:calc(100dvh - 8px);display:flex;flex-direction:column;background:var(--surface);border-radius:26px 26px 0 0;overflow:hidden;
+  transition:transform .2s}
+.shb{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:0 18px calc(26px + env(safe-area-inset-bottom) + var(--bar))}
+.shh{flex:none;display:flex;justify-content:center;position:relative;padding:8px 10px 0;touch-action:none}
+.shh i{width:44px;height:5px;border-radius:3px;background:var(--line);margin:4px 0 8px}
+.shx{position:absolute;right:10px;top:8px;width:48px;height:48px;border-radius:50%;border:2px solid var(--line);background:var(--bg);color:var(--ink);
+  font-size:22px;font-weight:800;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
+.shb h3{padding-right:52px}
 .sh h3{margin:2px 0 4px;font-size:calc(26px*var(--fs))}
 .sh p{margin:0 0 14px;color:var(--muted);font-size:calc(19px*var(--fs))}
 .pick{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
@@ -353,6 +362,7 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
   .tool.desk{display:flex}
   .sheet{align-items:center;justify-content:center}
   .sh{max-width:560px;border-radius:26px}
+  .shh i{visibility:hidden}
   .dark{margin-top:10px}
   .dark .btn{min-height:48px;font-size:calc(17px*var(--fs))}
   .dkb{grid-template-columns:1fr 1fr}
@@ -438,7 +448,8 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
 <script>
 "use strict";
 (function(){ var ua = navigator.userAgent, sa = navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
-  if (/iPhone|iPod/.test(ua) && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Viber|Telegram|FBAN|FBAV|Instagram|Line\//.test(ua) && !sa) document.documentElement.classList.add("iosbar"); })();
+  if (/iPhone|iPod/.test(ua) && /Safari\//.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|Viber|Telegram|FBAN|FBAV|Instagram|Line\//.test(ua) && !sa) document.documentElement.classList.add("iosbar");
+  else if (/iPhone|iPod/.test(ua) && (typeof window.TelegramWebviewProxy !== "undefined" || /Telegram/.test(ua)) && !sa) document.documentElement.classList.add("iosbar", "tgbar"); })();
 var LAT = 50.476, LON = 29.70;
 var ST = null, WX = null, DAY = 0, NOWM = 0, TODAY = "", TOMORROW = "";
 var GROUPS = ["6.2", "5.1", "5.2", "1.1"], GRP = "6.2", OFFLINE = false, CACHEAT = 0, DARKN = 0, BACKN = 0, CUR = null, DARKERR = false;
@@ -659,7 +670,8 @@ function drawTop(){
   if (!OFFLINE && ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
   $("alert").innerHTML = al.join("<br>"); $("alert").hidden = !al.length;
 }
-function tick(){ var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawNow(); drawTop(); drawChg(); drawDial(); drawStats(); }
+var TPEND = false;
+function tick(){ if (TOUR){ TPEND = true; return; } var k = kyiv(); NOWM = k.min; TODAY = k.date; TOMORROW = addDay(TODAY, 1); drawNow(); drawTop(); drawChg(); drawDial(); drawStats(); }
 /* ---------- «ДТЕК змінив графік» ----------
    Телефон пам'ятає графік, який людина вже бачила (selo:seen:<черга>). Якщо ДТЕК його змінив
    або з'явився графік на завтра — банер угорі й позначка «нове» біля змінених годин, доки не натиснуть «Зрозуміло». */
@@ -733,7 +745,7 @@ function wxWarn(){
   if (snow >= 5) w.push("❄️ Сильний сніг: до " + Math.round(snow) + " см.");
   return w.slice(0, 2).join("<br>");
 }
-function drawWx(){
+function drawWx(){ if (TOUR){ TPEND = true; return; }
   var ww = wxWarn(); $("wxwarn").innerHTML = ww; $("wxwarn").hidden = !ww;
   if (!WX || !WX.ok){ $("wxt").textContent = "—"; $("wxd1").textContent = "Погода зараз недоступна"; $("wxf").textContent = ""; $("wxr").style.display = "none"; return; }
   var c = WX.current, k = wxKind(c.code, c.day);
@@ -816,7 +828,7 @@ function ROWS(k){ var l = $("list"), n = Math.min(k, l.children.length), f = l.c
   return {t: "r", x: f.left - 8, y: f.top - 8, w: f.width + 16, h: z.bottom - f.top + 16}; }
 var STEPS = [
   ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: за графіком є світло чи немає, і коли зміниться. Червона рамка — немає, зелена — є. Якщо світло зникло не за графіком — натисніть «У мене світла немає», сусіди це побачать. Коли дадуть — «Світло з’явилось»."],
-  ["dial", function(){ return [A_(86, 128), C_(56)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне заштриховане — немає. Риски на колі — кожна година, короткі — пів години. Темна риска з крапкою — котра зараз година. Те, що вже минуло, притемнене."],
+  ["dial", function(){ return [A_(86, 128), C_(56)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне — немає. Довгі риски — години, короткі — пів години. Риска з крапкою — котра зараз година."],
   ["dial", function(){ return [A_(128, 152), R_("sun", 6)]; }, "Сонце: день і ніч", "Кільце навколо: жовте «день» — поки світить сонце, синє «ніч» — темно. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках."],
   ["seg", function(){ return [R_("seg", 6)]; }, "Сьогодні і завтра", "Натисніть «Завтра», щоб побачити графік на завтра. «Сьогодні» — повернутися."],
   ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "💡 — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз». Якщо ДТЕК змінив графік — угорі з’явиться синє повідомлення, а нові години будуть позначені «нове»."],
@@ -838,17 +850,20 @@ addEventListener("keydown", function(e){ if (TOUR && ["ArrowDown", "ArrowUp", "P
 function docH(){ return Math.max(document.documentElement.scrollHeight, document.body.scrollHeight); }
 function tour(n){
   TOUR = n; var ov = $("overlay");
-  if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; return; }
+  if (!n){ ov.innerHTML = ""; document.body.style.paddingBottom = ""; document.documentElement.style.overflowAnchor = ""; modalClosed();
+    if (TPEND){ TPEND = false; tick(); drawWx(); } return; }
+  modalOpen(); document.documentElement.style.overflowAnchor = "none";
   LS.set("selo:seen", "1");
   if (DESK()) return drawTour(n);
   document.body.style.paddingBottom = "70vh";
   var hh = STEPS[n - 1][1](), t0 = Math.min.apply(null, hh.map(function(o){ return o.t === "r" ? o.y : o.cy - o.r; }));
   // поки сторінка пливе до наступного блоку — лише затемнення, без підказки
   ov.innerHTML = '<svg class="tourbg" width="' + document.documentElement.clientWidth + '" height="' + docH() + '"><rect width="100%" height="100%" fill="rgba(4,8,15,.62)" style="pointer-events:auto"/></svg>';
-  smoothTo(Math.max(0, window.scrollY + t0 - 24), function(){ if (TOUR === n) drawTour(n); });
+  TDRAWN = 0; smoothTo(Math.max(0, window.scrollY + t0 - 24), function(){ if (TOUR === n) drawTour(n); });
 }
+var TDRAWN = 0;
 function drawTour(n){
-  var ov = $("overlay");
+  var ov = $("overlay"); TDRAWN = n;
   // усе малюємо в координатах сторінки (не екрана), тож підсвічування не «з'їжджає», навіть якщо сторінка зрушиться
   var sx = window.scrollX, sy = window.scrollY;
   var S = STEPS[n - 1], holes = S[1]().map(function(o){ var c = {}; for (var k in o) c[k] = o[k];
@@ -887,7 +902,7 @@ function drawTour(n){
     var tipEl = ov.querySelector(".tip"), tpP = tipEl.querySelector("p");
     if (tpP && tpP.scrollHeight > tpP.clientHeight + 4){
       tpP.classList.add("more"); var mh = document.createElement("div"); mh.className = "mh"; mh.textContent = "↓ гортайте текст"; tpP.after(mh);
-      tpP.addEventListener("scroll", function(){ var end = tpP.scrollTop + tpP.clientHeight >= tpP.scrollHeight - 4; tpP.classList.toggle("more", !end); mh.hidden = end; }, {passive: true});
+      tpP.addEventListener("scroll", function(){ var end = tpP.scrollTop + tpP.clientHeight >= tpP.scrollHeight - 4; tpP.classList.toggle("more", !end); tpP.classList.toggle("up", tpP.scrollTop > 4); mh.hidden = end; }, {passive: true});
     }
     var tp = tipEl.getBoundingClientRect().top, hb = bot - sy, ht = top - sy;
     if (hb > tp - 10 && bot - top <= tp - 22) window.scrollTo(0, sy + Math.min(ht - 10, hb - (tp - 12)));
@@ -897,7 +912,15 @@ $("overlay").addEventListener("click", function(e){ var b = e.target.closest("[d
   var f = e.target.closest("[data-fs]"); if (f) return setFs(FSI + (+f.getAttribute("data-fs")));
   var hh = e.target.closest("[data-h]"); if (hh){ LS.set("selo:seen", "1"); $("overlay").innerHTML = "";
     if (hh.getAttribute("data-h") === "tour"){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 60); } } });
-addEventListener("resize", function(){ if (TOUR) drawTour(TOUR); });
+addEventListener("resize", function(){ if (TOUR && TDRAWN === TOUR) drawTour(TOUR); });
+// якщо щось на сторінці зсунулось (банер, шрифт, панель браузера) — перемальовуємо підсвічування на новому місці
+(function(){ var T = 0, last = "";
+  function again(){ clearTimeout(T); T = setTimeout(function(){ if (!TOUR || TDRAWN !== TOUR) return;
+    var h = STEPS[TOUR - 1][1]().map(function(o){ return Math.round((o.t === "r" ? o.y : o.cy) + scrollY) + ":" + Math.round(o.t === "r" ? o.x : o.cx); }).join(",");
+    var hl = $("overlay").querySelector(".tourbg"); if (h !== last || !hl){ last = h; drawTour(TOUR); } }, 120); }
+  if (window.ResizeObserver) new ResizeObserver(again).observe($("app"));
+  if (window.visualViewport) visualViewport.addEventListener("resize", again);
+  setInterval(again, 1500); })();
 $("tourbtn").addEventListener("click", function(){ window.scrollTo(0, 0); setTimeout(function(){ tour(1); }, 50); });
 
 /* ---------- додати на екран ---------- */
@@ -923,12 +946,26 @@ function sheet(dev){
     '<li><span class="n">1</span><div><b>Натисніть <span class="kbd">⋮</span> угорі праворуч</b><span>Три крапки в Chrome (у Samsung — <span class="kbd">≡</span> унизу)</span></div></li>' +
     '<li><span class="n">2</span><div><b>«Додати на головний екран»</b><span>Або «Встановити застосунок»</span></div></li>' +
     '<li><span class="n">3</span><div><b>Натисніть «Встановити» чи «Додати»</b><span>Значок «Сяйво» з’явиться на екрані</span></div></li></ol>';
-  $("overlay").innerHTML = '<div class="sheet" id="sheet"><div class="sh"><h3>Додати на екран</h3><p>Який у вас телефон?</p>' +
-    '<div class="pick"><button data-dev="ios" class="' + (dev === "ios" ? "on" : "") + '">' + APPLE + 'iPhone</button><button data-dev="android" class="' + (dev === "android" ? "on" : "") + '">' + ANDR + 'Android</button></div>' + body +
-    '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div>';
+  sheetBox('<h3>Додати на екран</h3><p>Який у вас телефон?</p>' +
+    '<div class="pick"><button data-dev="ios" class="' + (dev === "ios" ? "on" : "") + '">' + APPLE + 'iPhone</button><button data-dev="android" class="' + (dev === "android" ? "on" : "") + '">' + ANDR + 'Android</button></div>' + body);
 }
-function closeSheet(){ if ($("sheet")) $("overlay").innerHTML = ""; }
-function sheetBox(inner){ $("overlay").innerHTML = '<div class="sheet" id="sheet"><div class="sh" role="dialog" aria-modal="true">' + inner + '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div>'; }
+function closeSheet(){ if ($("sheet")){ $("overlay").innerHTML = ""; modalClosed(); } }
+function sheetBox(inner){ var old = $("sheet") && $("sheet").querySelector(".shb"), keep = old ? old.scrollTop : 0;
+  $("overlay").innerHTML = '<div class="sheet" id="sheet"><div class="sh" role="dialog" aria-modal="true"><div class="shh"><i></i><button class="shx" id="shx" aria-label="Закрити">✕</button></div><div class="shb">' + inner + '<button class="btn sec" id="shclose" style="width:100%;margin-top:16px">Закрити</button></div></div></div>';
+  if (keep) $("sheet").querySelector(".shb").scrollTop = keep;
+  modalOpen(); }
+/* вікна й тур — у історії браузера: кнопка «Назад» (Android) закриває їх, а не виходить зі Сяйва */
+var MODAL = false, IGNPOP = false;
+function modalOpen(){ if (MODAL) return; MODAL = true; try { history.pushState({selo: 1}, ""); } catch (e) {} }
+function modalClosed(){ if (!MODAL) return; MODAL = false; if (history.state && history.state.selo){ IGNPOP = true; try { history.back(); } catch (e) { IGNPOP = false; } } }
+addEventListener("popstate", function(){ if (IGNPOP){ IGNPOP = false; return; } if (!MODAL) return; MODAL = false;
+  if (TOUR) tour(0); else $("overlay").innerHTML = ""; });
+// свайп униз за шапку вікна — закрити
+(function(){ var y0 = null, sh = null;
+  document.addEventListener("touchstart", function(e){ var h = e.target.closest && e.target.closest(".shh"); if (!h || e.target.closest(".shx")) return; sh = h.parentNode; y0 = e.touches[0].clientY; sh.style.transition = "none"; }, {passive: true});
+  document.addEventListener("touchmove", function(e){ if (y0 === null) return; var d = Math.max(0, e.touches[0].clientY - y0); sh.style.transform = "translateY(" + d + "px)"; }, {passive: true});
+  document.addEventListener("touchend", function(e){ if (y0 === null) return; var d = e.changedTouches[0].clientY - y0; sh.style.transition = ""; y0 = null;
+    if (d > 90) closeSheet(); else sh.style.transform = ""; }); })();
 /* черга */
 function grpSheet(){
   sheetBox('<h3>Яка у вас черга?</h3><p>Майже все село — у черзі <b>6.2</b>. Якщо у вас інша, оберіть її — Сяйво запам’ятає. Свою чергу можна побачити на сайті ДТЕК за адресою.</p><div class="pick grp">' +
@@ -984,7 +1021,7 @@ $("overlay").addEventListener("click", function(e){
 $("addbtn").addEventListener("click", function(){ sheet(IOS ? "ios" : AND ? "android" : "ios"); });
 $("overlay").addEventListener("click", function(e){
   var d = e.target.closest("[data-dev]"); if (d) return sheet(d.getAttribute("data-dev"));
-  if (e.target.id === "shclose" || e.target.id === "sheet") return closeSheet();
+  if (e.target.id === "shclose" || e.target.id === "shx" || e.target.id === "sheet") return closeSheet();
   if (e.target.closest("#instbtn") && BIP){ BIP.prompt(); BIP.userChoice.then(function(){ BIP = null; closeSheet(); }); }
 });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(function(){});
