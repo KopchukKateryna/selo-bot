@@ -392,7 +392,6 @@ a.btn{display:flex;align-items:center;justify-content:center;text-decoration:non
       <div><div class="t1">За графіком зараз</div><div class="t2" id="nowt">…</div></div>
     </div>
     <div class="next" id="nownext">&nbsp;</div>
-    <div class="dark" id="dark"></div>
   </section>
 
   <section class="card" id="sched">
@@ -602,39 +601,14 @@ function nextChange(){
   return {state: state, end: end, day: day};
 }
 function plN(n){ var a = n % 10, b = n % 100; return n + (a === 1 && b !== 11 ? " сусід повідомив" : a >= 2 && a <= 4 && (b < 12 || b > 14) ? " сусіди повідомили" : " сусідів повідомили"); }
-function myDark(){ var t = +(LS.get("selo:dark") || 0); return !!t && Date.now() - t < 2 * 3600e3; }
-function myBack(){ var t = +(LS.get("selo:back") || 0); return !!t && Date.now() - t < 3600e3; }
-function darkLine(){ var n = DARKN || 0, b = BACKN || 0;
-  return (n > 0 ? '<span class="cnt">Без світла: ' + plN(n) + '</span> (за останні 2 години).' : "") + (b > 0 ? (n > 0 ? " " : "") + '<span class="cnt bk">Світло вже з’явилось у ' + b + '</span>' + (n > 0 ? "." : " (за останню годину).") : ""); }
-function drawDark(){
-  var el = $("dark"), n = DARKN || 0, b = BACKN || 0, h = "", ln = darkLine();
-  if (!ST || OFFLINE){ el.innerHTML = DARKERR ? '<small>Не вдалося надіслати — немає зв’язку.</small>' : ""; return; }
-  if (myDark()) h = '<p class="me">✓ Ви повідомили сусідам, що світла немає</p><button type="button" class="btn yes" data-dark="0">Світло з’явилось</button>' +
-    '<small>' + (n > 1 || b > 0 ? ln : 'Коли світло дадуть — натисніть кнопку. Інакше позначка зникне сама через 2 години.') + '</small>';
-  else if (CUR !== "off" || n > 0){
-    if (myBack()) h = '<p class="me ok">✓ Ви повідомили, що світло з’явилось</p>';
-    h += '<div class="dkb">' + (CUR !== "off" ? '<button type="button" class="btn no" data-dark="1">У мене світла немає</button>' : "") +
-      (n > 0 && !myBack() ? '<button type="button" class="btn yes" data-dark="0">У мене світло є</button>' : "") + '</div>';
-    h += '<small>' + (ln || 'Натисніть, якщо світло зникло не за графіком, — сусіди це побачать.') + '</small>';
-  } else if (b > 0) h = '<small>' + ln + '</small>';
-  if (DARKERR) h += '<small>Не вдалося надіслати — немає зв’язку. Спробуйте ще раз.</small>';
-  el.innerHTML = h;
-}
-function sendDark(on){
-  DARKERR = false;
-  fetch(q("/api/dark"), {method: "POST", headers: {"content-type": "application/json"}, body: JSON.stringify({uid: UID, on: on ? 1 : 0})})
-    .then(function(r){ return r.json(); }).then(function(j){ if (!j || !j.ok) throw 0; DARKN = j.n || 0; BACKN = j.b || 0; LS.set("selo:dark", on ? String(Date.now()) : "0"); LS.set("selo:back", on ? "0" : String(Date.now())); drawDark(); drawTop(); })
-    .catch(function(){ DARKERR = true; drawDark(); });
-}
-$("dark").addEventListener("click", function(e){ var b = e.target.closest("[data-dark]"); if (b){ b.disabled = true; sendDark(b.getAttribute("data-dark") === "1"); } });
 function drawNow(){
   var iv = intervals(TODAY);
   CUR = null;
-  if (!ST){ drawDark(); return; }
-  if (!iv){ drawDark(); $("now").style.setProperty("--c", "var(--muted)"); $("nowic").innerHTML = IC_ON; $("nowt").textContent = "Графіка немає";
+  if (!ST){ return; }
+  if (!iv){ $("now").style.setProperty("--c", "var(--muted)"); $("nowic").innerHTML = IC_ON; $("nowt").textContent = "Графіка немає";
     $("nownext").innerHTML = '<small>ДТЕК поки не оприлюднив графік на сьогодні</small>'; return; }
-  var n = nextChange(); if (!n){ drawDark(); return; }
-  CUR = n.state; drawDark();
+  var n = nextChange(); if (!n){ return; }
+  CUR = n.state;
   var off = n.state !== "on", txt = off ? (n.state === "maybe" ? "Можливе відключення" : "Світла немає") : "Світло є";
   $("now").style.setProperty("--c", off ? (n.state === "maybe" ? "var(--maybe)" : "var(--off)") : "var(--on)");
   $("nowic").innerHTML = off ? IC_OFF : IC_ON; $("nowt").textContent = txt;
@@ -664,7 +638,6 @@ function drawTop(){
   var al = [];
   if (OFFLINE){ var ck = kyiv(new Date(CACHEAT)), cp = ck.date.split("-");
     al.push("📵 Немає інтернету. Показую графік, збережений " + (ck.date === TODAY ? "сьогодні" : cp[2] + "." + cp[1]) + " о " + hm(ck.min) + ". Він міг змінитися."); }
-  if (!OFFLINE && DARKN >= 3 && CUR === "on") al.push("⚠️ " + plN(DARKN) + ", що світла немає, хоча за графіком воно має бути." + (BACKN > 0 ? " У " + BACKN + " світло вже з’явилось." : ""));
   if (ST.notice && ST.notice.active) al.push("⚠️ ДТЕК повідомляє про " + (ST.notice.noSchedule ? "екстрені відключення — графіки зараз не діють." : "екстрені або аварійні відключення. Графік може не діяти."));
   if (ST.outage && ST.outage.kind === "emergency") al.push("⚠️ ДТЕК: аварійне відключення в частині села" + (ST.outage.end ? ", орієнтовно до " + new Date(ST.outage.end).toLocaleTimeString("uk-UA", {timeZone: "Europe/Kyiv", hour: "2-digit", minute: "2-digit"}) : "") + ".");
   if (!OFFLINE && ago != null && ago > 45) al.push("⏳ Дані з ДТЕК давно не оновлювались — графік може бути застарілим.");
@@ -827,14 +800,11 @@ function A_(ri, ro){ var c = C_(1); return {t: "a", cx: c.cx, cy: c.cy, ri: ri *
 function ROWS(k){ var l = $("list"), n = Math.min(k, l.children.length), f = l.children[0].getBoundingClientRect(), z = l.children[n - 1].getBoundingClientRect();
   return {t: "r", x: f.left - 8, y: f.top - 8, w: f.width + 16, h: z.bottom - f.top + 16}; }
 var STEPS = [
-  ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: за графіком є світло чи немає, і коли зміниться. Червона рамка — немає, зелена — є. Якщо світло зникло не за графіком — натисніть «У мене світла немає», сусіди це побачать. Коли дадуть — «Світло з’явилось»."],
+  ["now", function(){ return [R_("now")]; }, "Що зараз", "Головне — тут: є зараз світло за графіком чи немає, і коли це зміниться. Зелена рамка — світло є, червона — немає."],
   ["dial", function(){ return [A_(86, 128), C_(56)]; }, "Коло — це годинник на 24 години", "Зелене — світло є, червоне — немає. Довгі риски — години, короткі — пів години. Риска з крапкою — котра зараз година."],
-  ["dial", function(){ return [A_(128, 152), R_("sun", 6)]; }, "Сонце: день і ніч", "Кільце навколо: жовте «день» — поки світить сонце, синє «ніч» — темно. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках."],
-  ["seg", function(){ return [R_("seg", 6)]; }, "Сьогодні і завтра", "Натисніть «Завтра», щоб побачити графік на завтра. «Сьогодні» — повернутися."],
-  ["list", function(){ return [ROWS(4)]; }, "Той самий графік — списком", "💡 — світло є, ✕ — немає. Те, що вже минуло, бліде, а поточний час позначено «зараз». Якщо ДТЕК змінив графік — угорі з’явиться синє повідомлення, а нові години будуть позначені «нове»."],
-  ["weather", function(){ return [R_("wxtop")]; }, "Погода", "Температура зараз, чи буде дощ або сніг і до котрої години, погода на найближчі години. Нижче — прогноз на 3 дні."],
-  ["stats", function(){ return [R_("statnums")]; }, "Скільки без світла", "Скільки годин без світла за графіком сьогодні, завтра і за останній тиждень."],
-  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Надіслати графік картинкою рідним чи сусідам, додати Сяйво на екран телефона, ще раз подивитися цей тур або змінити розмір шрифту."]];
+  ["dial", function(){ return [A_(128, 152), R_("sun", 6)]; }, "Сонце: день і ніч", "Жовте кільце — день, синє — ніч. ☀ — схід сонця, ☾ — захід. Точний час — у двох картках унизу."],
+  ["list", function(){ return [ROWS(3)]; }, "Графік списком", "💡 — світло є, ✕ — немає. Графік на завтра — кнопка «Завтра» над колом. Якщо ДТЕК змінить графік — угорі з’явиться синє повідомлення."],
+  ["tools", function(){ return [R_("tools")]; }, "Корисні кнопки", "Надіслати графік рідним, додати Сяйво на екран телефона, ще раз подивитися ці підказки або збільшити шрифт."]];
 var DESK = function(){ return matchMedia("(min-width:1100px)").matches; };
 function smoothTo(y, cb){
   var y0 = window.scrollY, dy = y - y0, t0 = null, dur = Math.min(900, 300 + Math.abs(dy) * 0.6);
